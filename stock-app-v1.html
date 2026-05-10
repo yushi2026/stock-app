@@ -1,0 +1,2359 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="うちのストック">
+<meta name="theme-color" content="#FAF7F2">
+<title>うちのストック</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #FAF7F2;
+  --bg-alt: #F5F1EA;
+  --bg-warm: #FBF6EC;
+  --card: #FFFFFF;
+  --border: #EFEAE0;
+  --border-strong: #E8E2D5;
+  --text: #2A2520;
+  --text-2: #4A4239;
+  --text-3: #6B6258;
+  --text-4: #A39B8E;
+  --accent: #D4763A;
+  --accent-soft: #E8C9A8;
+  --accent-bg: #FBF6EC;
+  --ok: #6B8E78;
+  --ok-bg: #EAF2EC;
+  --warn: #E89B4A;
+  --warn-bg: #FBF1E5;
+  --danger: #C84B3A;
+  --danger-bg: #FBE9E5;
+  --black: #2A2520;
+  --black-deep: #1A1614;
+  --baby-color: #9B7BA8;
+  --daily-color: #6B8AAE;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  background: var(--bg);
+  font-family: 'Zen Maru Gothic', 'Noto Sans JP', -apple-system, sans-serif;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: contain;
+}
+body { display: flex; justify-content: center; }
+.serif { font-family: 'DM Serif Display', serif; }
+.body-font { font-family: 'Noto Sans JP', sans-serif; }
+button {
+  font-family: inherit; border: none; background: none; cursor: pointer;
+  color: inherit; padding: 0;
+}
+input, select, textarea {
+  font-family: inherit; font-size: inherit; color: inherit;
+  -webkit-appearance: none; appearance: none;
+}
+.app {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  background: var(--bg);
+  position: relative;
+  padding-bottom: 80px;
+}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Top header */
+.top-header { padding: 18px 20px 10px; }
+.greeting { font-size: 11px; color: var(--text-4); margin-bottom: 2px; }
+.title-main { font-family: 'DM Serif Display', serif; font-size: 28px; line-height: 1.1; }
+.title-sub { font-family: 'Zen Maru Gothic', sans-serif; font-size: 22px; font-weight: 700; }
+.avatars-stack { display: flex; }
+.avatars-stack > * + * { margin-left: -8px; }
+.avatar {
+  border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; color: white; flex-shrink: 0;
+}
+.avatar-sm { width: 28px; height: 28px; font-size: 11px; border: 2px solid var(--bg); }
+.avatar-md { width: 36px; height: 36px; font-size: 13px; }
+.avatar-lg { width: 48px; height: 48px; font-size: 18px; }
+
+/* Search */
+.search-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 8px 12px; margin: 0 20px 8px;
+}
+.search-bar input {
+  flex: 1; background: transparent; border: none; outline: none;
+  font-size: 13px; color: var(--text);
+}
+.search-bar input::placeholder { color: var(--text-4); }
+
+/* Category tabs */
+.cat-tabs {
+  display: flex; gap: 8px; padding: 6px 20px;
+  overflow-x: auto;
+}
+.cat-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 999px;
+  background: var(--card); border: 1px solid var(--border);
+  font-size: 12px; color: var(--text-2); white-space: nowrap;
+}
+.cat-tab .count { font-size: 10px; color: var(--text-4); }
+.cat-tab.active {
+  background: var(--black); color: white; border-color: var(--black);
+}
+.cat-tab.active .count { color: #D4B89A; }
+
+/* Cards */
+.cards-list { padding: 8px 20px 24px; }
+.product-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 12px;
+  margin-bottom: 8px;
+  display: block; width: 100%; text-align: left;
+}
+.product-card:active { transform: scale(0.99); }
+.product-card-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 8px;
+}
+.product-meta {
+  display: flex; gap: 6px; align-items: center; margin-bottom: 2px;
+  font-size: 11px; color: var(--text-4);
+}
+.product-name {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.nest-badge {
+  font-size: 9px; padding: 2px 6px; border-radius: 999px;
+  background: var(--accent-bg); color: var(--accent);
+  border: 1px solid var(--accent-soft);
+}
+.product-card-bot {
+  display: flex; justify-content: space-between; align-items: flex-end;
+}
+.stock-display { display: flex; align-items: baseline; gap: 4px; }
+.stock-num { font-family: 'DM Serif Display', serif; font-size: 24px; line-height: 1; }
+.stock-num.danger { color: var(--danger); }
+.stock-num.warn { color: var(--warn); }
+.stock-num.ok { color: var(--text); }
+.stock-unit { font-size: 11px; color: var(--text-3); }
+.stock-divider { font-size: 12px; color: var(--text-4); margin: 0 2px; }
+.stock-total { font-size: 10px; color: var(--text-4); margin-top: 1px; }
+.stock-expiry { display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 10px; color: var(--text-3); }
+.btn-circle {
+  width: 30px; height: 30px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 16px; flex-shrink: 0;
+}
+.btn-circle.minus { background: var(--bg-alt); color: var(--text-2); }
+.btn-circle.plus { background: var(--black); color: white; }
+.stock-actions { display: flex; gap: 8px; }
+.progress {
+  height: 4px; background: var(--bg-alt); border-radius: 999px;
+  overflow: hidden; margin-top: 8px;
+}
+.progress > div { height: 100%; border-radius: 999px; transition: width .25s; }
+.progress > div.ok { background: var(--ok); }
+.progress > div.warn { background: var(--warn); }
+.progress > div.danger { background: var(--danger); }
+
+/* Bottom nav */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  background: var(--card); border-top: 1px solid var(--border);
+  display: flex; justify-content: space-around; align-items: center;
+  padding: 8px 4px max(20px, env(safe-area-inset-bottom)) 4px;
+  z-index: 50;
+}
+.nav-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  flex: 1; padding: 4px;
+}
+.nav-btn .icon { color: var(--text-4); }
+.nav-btn .label { font-size: 10px; color: var(--text-4); }
+.nav-btn.active .icon { color: var(--accent); }
+.nav-btn.active .label { color: var(--accent); font-weight: 700; }
+.nav-btn.center { margin-top: -24px; }
+.nav-btn.center .icon-wrap {
+  width: 52px; height: 52px; border-radius: 999px; background: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 16px rgba(212, 118, 58, 0.35);
+}
+
+/* Page transition */
+.page { display: none; }
+.page.active { display: block; }
+
+/* Detail */
+.page-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 20px;
+}
+.page-header .back { padding: 6px; margin: -6px; }
+.page-header .title { font-size: 13px; color: var(--text-4); }
+.page-content { padding: 0 20px; }
+.page-content h2.serif { font-size: 24px; line-height: 1.2; margin-bottom: 4px; }
+
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 16px; margin-bottom: 12px;
+}
+.card.warm { background: var(--bg-warm); border-color: var(--accent-soft); }
+.card.dark { background: var(--black); color: white; }
+
+.center-stock {
+  text-align: center; padding-bottom: 14px; border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+.center-stock .label { font-size: 11px; color: var(--text-4); }
+.center-stock .num {
+  font-family: 'DM Serif Display', serif; font-size: 56px;
+  line-height: 1; margin: 4px 0;
+}
+.center-stock .unit { font-size: 13px; color: var(--text-4); }
+
+.unit-row {
+  background: var(--bg-alt); border-radius: 12px; padding: 12px;
+}
+.unit-row + .unit-row { margin-top: 10px; }
+.unit-row-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px;
+}
+.unit-row-head .h { font-size: 11px; font-weight: 700; color: var(--text-2); }
+.unit-row-head .hint { font-size: 10px; color: var(--text-4); }
+.unit-row-body {
+  display: flex; align-items: center; gap: 8px;
+}
+.unit-row-body .center {
+  flex: 1; text-align: center;
+}
+.unit-row-body .num {
+  font-family: 'DM Serif Display', serif; font-size: 22px;
+}
+.unit-row-body .of { font-size: 12px; color: var(--text-3); margin-left: 4px; }
+.btn-square {
+  width: 32px; height: 32px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 16px;
+}
+.btn-square.minus {
+  background: white; color: var(--text-2); border: 1px solid var(--border-strong);
+}
+.btn-square.plus { background: var(--black); color: white; }
+.btn-square:disabled { opacity: 0.4; }
+
+/* Alert */
+.alert-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; border-radius: 10px; font-size: 11px;
+}
+.alert-bar.danger { background: var(--danger-bg); color: var(--danger); }
+.alert-bar.warn { background: var(--warn-bg); color: var(--warn); }
+
+/* Section title */
+.section-title {
+  font-size: 11px; font-weight: 700; color: var(--text-4);
+  text-transform: uppercase; letter-spacing: 1.5px;
+  margin: 16px 4px 8px;
+}
+
+/* Add screen menu */
+.add-method {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 14px; border-radius: 16px; text-align: left;
+  background: var(--card); border: 1px solid var(--border);
+}
+.add-method.primary { background: var(--black); color: white; border-color: var(--black); }
+.add-method.primary .meta { color: var(--text-4); }
+.add-method .icon-wrap {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: var(--bg-alt); display: inline-flex;
+  align-items: center; justify-content: center; flex-shrink: 0;
+}
+.add-method.primary .icon-wrap { background: var(--accent); }
+.add-method .label { font-size: 13px; font-weight: 700; }
+.add-method .meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+/* Form */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block; font-size: 12px; font-weight: 700;
+  color: var(--text-2); margin-bottom: 6px;
+}
+.form-label .req { color: var(--danger); margin-left: 2px; }
+.form-input, .form-select, .form-textarea {
+  width: 100%; padding: 12px 14px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; font-size: 14px;
+  outline: none; transition: border-color .15s;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--accent);
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.form-help { font-size: 11px; color: var(--text-4); margin-top: 4px; }
+
+.toggle-group {
+  display: flex; gap: 8px; background: var(--bg-alt); padding: 4px;
+  border-radius: 12px;
+}
+.toggle-btn {
+  flex: 1; padding: 10px; font-size: 12px; font-weight: 700;
+  border-radius: 9px; color: var(--text-3);
+}
+.toggle-btn.active { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+
+.btn-primary {
+  width: 100%; padding: 14px; background: var(--black); color: white;
+  border-radius: 14px; font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-primary:disabled { opacity: 0.5; }
+.btn-secondary {
+  width: 100%; padding: 14px; background: var(--card); color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 14px; font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-danger-ghost {
+  width: 100%; padding: 12px; color: var(--danger);
+  font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+
+/* Settings */
+.settings-section { margin-bottom: 20px; }
+.settings-list {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden;
+}
+.settings-row {
+  display: flex; align-items: center; gap: 12px; padding: 12px;
+  width: 100%; text-align: left;
+}
+.settings-row + .settings-row { border-top: 1px solid var(--bg-alt); }
+.settings-row .icon-wrap {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--bg-alt); display: inline-flex;
+  align-items: center; justify-content: center;
+}
+.settings-row .label { font-size: 13px; flex: 1; }
+.settings-row .meta { font-size: 11px; color: var(--text-4); }
+
+/* Empty state */
+.empty {
+  text-align: center; padding: 60px 20px; color: var(--text-3);
+}
+.empty .emoji { font-size: 48px; margin-bottom: 12px; }
+.empty .h { font-size: 14px; font-weight: 700; color: var(--text-2); margin-bottom: 4px; }
+.empty .p { font-size: 12px; color: var(--text-4); margin-bottom: 16px; }
+
+/* Onboarding */
+.onboarding {
+  padding: 60px 24px 24px; min-height: 100vh;
+  display: flex; flex-direction: column;
+  background: linear-gradient(135deg, #FAF7F2 0%, #FBF6EC 50%, #F5E8D8 100%);
+}
+.onboarding .brand-tag {
+  font-size: 11px; letter-spacing: 3px; color: var(--accent);
+  text-transform: uppercase; margin-bottom: 8px;
+}
+.onboarding .brand-name {
+  font-family: 'DM Serif Display', serif; font-size: 56px; line-height: 1;
+  margin-bottom: 16px;
+}
+.onboarding .brand-name .dot { color: var(--accent); }
+.onboarding .lead {
+  font-size: 14px; color: var(--text-2); line-height: 1.7; max-width: 280px;
+  margin-bottom: auto;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5);
+  z-index: 100; display: none; align-items: flex-end; justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  width: 100%; max-width: 480px; background: var(--card);
+  border-radius: 24px 24px 0 0; padding: 16px 20px max(20px, env(safe-area-inset-bottom));
+  max-height: 90vh; overflow-y: auto;
+  animation: slideUp .25s ease-out;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-handle {
+  width: 40px; height: 4px; background: var(--border-strong);
+  border-radius: 2px; margin: 0 auto 16px;
+}
+.modal-title {
+  font-family: 'DM Serif Display', serif; font-size: 22px;
+  margin-bottom: 12px;
+}
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+  background: var(--black); color: white; padding: 10px 20px;
+  border-radius: 999px; font-size: 13px; font-weight: 600;
+  z-index: 200; opacity: 0; pointer-events: none;
+  transition: opacity .2s, transform .2s;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+/* Shopping list */
+.shop-section { margin-bottom: 20px; }
+.shop-section-h {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; margin: 0 4px 8px;
+}
+.shop-section-h.danger { color: var(--danger); }
+.shop-section-h.warn { color: var(--text-3); }
+.shop-item {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 12px; display: flex;
+  align-items: center; gap: 10px; margin-bottom: 8px;
+  width: 100%; text-align: left;
+}
+.shop-item.purchased { opacity: 0.5; }
+.shop-item.purchased .name { text-decoration: line-through; }
+.shop-check {
+  width: 24px; height: 24px; border-radius: 6px;
+  border: 2px solid var(--border-strong); flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.shop-check.checked { background: var(--ok); border-color: var(--ok); color: white; }
+.shop-item-body { flex: 1; min-width: 0; }
+.shop-item-cat { font-size: 10px; color: var(--text-4); }
+.shop-item-name { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shop-item-qty { font-size: 12px; font-weight: 700; }
+.shop-item-qty.danger { color: var(--danger); }
+.shop-item-qty.warn { color: var(--text-3); }
+
+/* Notifications */
+.notif-item {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 12px; display: flex;
+  gap: 12px; margin-bottom: 8px;
+}
+.notif-icon-wrap {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.notif-icon-wrap.danger { background: var(--danger-bg); color: var(--danger); }
+.notif-icon-wrap.warn { background: var(--warn-bg); color: var(--warn); }
+.notif-icon-wrap.ok { background: var(--ok-bg); color: var(--ok); }
+.notif-icon-wrap.expiry { background: var(--accent-bg); color: var(--accent); }
+.notif-body { flex: 1; min-width: 0; }
+.notif-title-row { display: flex; justify-content: space-between; gap: 8px; }
+.notif-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.notif-time { font-size: 10px; color: var(--text-4); flex-shrink: 0; }
+.notif-text { font-size: 11px; color: var(--text-3); line-height: 1.5; margin-top: 2px; }
+
+/* History (per-product, in detail card) */
+.history-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 0;
+}
+.history-item + .history-item { border-top: 1px solid var(--bg-alt); }
+.history-text { font-size: 11px; color: var(--text-3); flex: 1; }
+.history-time { font-size: 10px; color: var(--text-4); }
+
+/* Pin */
+.pin-btn {
+  width: 28px; height: 28px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+  background: transparent; color: var(--text-4);
+  transition: background .15s, color .15s;
+}
+.pin-btn.pinned { color: var(--accent); }
+.pin-btn:active { transform: scale(0.9); }
+.product-card.pinned {
+  border-color: var(--accent-soft);
+  background: linear-gradient(180deg, var(--accent-bg) 0%, var(--card) 30%);
+}
+.pin-section-divider {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--text-4);
+  padding: 8px 24px 4px;
+}
+.pin-section-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* Memo (multi-line notes) */
+.form-textarea {
+  width: 100%; padding: 12px 14px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; font-size: 14px;
+  outline: none; resize: vertical;
+  min-height: 80px; line-height: 1.5;
+  font-family: inherit;
+}
+.form-textarea:focus { border-color: var(--accent); }
+.memo-indicator {
+  display: inline-flex; align-items: center; gap: 2px;
+  font-size: 10px; color: var(--text-4);
+}
+.product-notes-display {
+  font-size: 12px; color: var(--text-3);
+  background: var(--bg-alt);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+/* History page */
+.history-filter-bar {
+  display: flex; gap: 8px; padding: 6px 20px 12px;
+  overflow-x: auto;
+  align-items: center;
+}
+.history-filter-bar .cat-tab { font-size: 12px; }
+.history-filter-bar select.form-select {
+  font-size: 12px; padding: 6px 28px 6px 12px;
+  width: auto; border-radius: 999px;
+  background-color: var(--card);
+}
+.history-day-section { padding: 0 20px; margin-bottom: 18px; }
+.history-day-head {
+  font-size: 11px; font-weight: 700; color: var(--text-3);
+  margin-bottom: 8px; padding: 0 4px;
+}
+.history-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 12px 14px; margin-bottom: 8px;
+  display: flex; gap: 10px; align-items: flex-start;
+  width: 100%; text-align: left;
+}
+.history-card .icon-wrap {
+  width: 32px; height: 32px; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 14px;
+  background: var(--bg-alt);
+}
+.history-card .icon-wrap.refill { background: var(--ok-bg); color: var(--ok); }
+.history-card .icon-wrap.consume { background: var(--warn-bg); color: var(--warn); }
+.history-card .icon-wrap.open { background: var(--accent-bg); color: var(--accent); }
+.history-card .icon-wrap.adjust { background: var(--bg-alt); color: var(--text-3); }
+.history-card .body { flex: 1; min-width: 0; }
+.history-card .row1 {
+  display: flex; justify-content: space-between; gap: 8px;
+  align-items: baseline;
+}
+.history-card .prod-name {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.history-card .time {
+  font-size: 10px; color: var(--text-4); flex-shrink: 0;
+}
+.history-card .change-text {
+  font-size: 12px; color: var(--text-3); margin-top: 2px;
+}
+.history-card .note {
+  font-size: 10px; color: var(--text-4); margin-top: 4px;
+  font-style: italic;
+}
+.history-empty { padding: 60px 20px; text-align: center; color: var(--text-4); }
+
+/* Util */
+.spacer { flex: 1; }
+.text-center { text-align: center; }
+.muted { color: var(--text-4); }
+.danger-text { color: var(--danger); }
+.btn-text { padding: 4px 8px; font-size: 12px; color: var(--accent); font-weight: 600; }
+hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div class="modal-overlay" id="modal"><div class="modal" id="modal-content"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================================
+// === Stock. - Stage 1 (LocalStorage version) v0.2 ===
+// === Adds: pin, multi-line memo, full history page ===
+// =============================================================
+
+const STORAGE_KEY = 'stock_app_v1_state';
+
+const CATEGORY_ICONS = {
+  'pet': '🐱', 'baby': '👶', 'daily': '✨',
+  'food': '🍽️', 'medicine': '💊', 'other': '📦',
+};
+const CATEGORY_COLORS = {
+  'pet': '#D4763A', 'baby': '#9B7BA8', 'daily': '#6B8AAE',
+  'food': '#6B8E78', 'medicine': '#C84B3A', 'other': '#A39B8E',
+};
+
+let state;
+
+function createInitialState() {
+  return {
+    user: null,
+    categories: [
+      { id: 'cat_pet', name: 'ペット', icon: 'pet', sortOrder: 1 },
+      { id: 'cat_baby', name: 'ベビー', icon: 'baby', sortOrder: 2 },
+      { id: 'cat_daily', name: '日用品', icon: 'daily', sortOrder: 3 },
+      { id: 'cat_other', name: 'その他', icon: 'other', sortOrder: 4 },
+    ],
+    products: [],
+    inventory: {},
+    stockLogs: [],
+    shoppingList: [],
+    notifications: [],
+    settings: {
+      alertThresholdDefault: 2,
+      expiryNoticeDays: 30,
+    },
+    ui: {
+      currentScreen: 'onboarding',
+      params: {},
+      selectedCategoryId: 'all',
+      searchQuery: '',
+      shopFilter: 'all',
+      historyRange: 'all',
+      historyProductFilter: '',
+    },
+  };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    parsed.ui = parsed.ui || {};
+    parsed.ui.currentScreen = parsed.user ? 'home' : 'onboarding';
+    parsed.ui.params = {};
+    parsed.ui.searchQuery = '';
+    if (!parsed.ui.historyRange) parsed.ui.historyRange = 'all';
+    return parsed;
+  } catch (e) { return null; }
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch (e) { console.error('Save failed', e); }
+}
+
+function uid(prefix = 'id') {
+  return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function getInventory(productId) {
+  return state.inventory[productId] || { sealedCount: 0, openedSubCount: 0, nearestExpiry: null };
+}
+
+function getTotalSubUnits(product, inv) {
+  if (!inv) inv = getInventory(product.id);
+  if (product.hasNested) {
+    return inv.sealedCount * product.subUnitsPerUnit + inv.openedSubCount;
+  }
+  return inv.sealedCount;
+}
+
+function getStatus(total, threshold, max) {
+  if (total === 0) return 'danger';
+  if (total <= threshold) return 'warn';
+  return 'ok';
+}
+
+function formatDateJP(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
+}
+
+function daysUntil(iso) {
+  if (!iso) return null;
+  const target = new Date(iso);
+  const now = new Date();
+  return Math.floor((target - now) / (1000 * 60 * 60 * 24));
+}
+
+function relativeTime(iso) {
+  if (!iso) return '';
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return 'たった今';
+  if (diff < 3600) return Math.floor(diff / 60) + '分前';
+  if (diff < 86400) return Math.floor(diff / 3600) + '時間前';
+  if (diff < 86400 * 7) return Math.floor(diff / 86400) + '日前';
+  return formatDateJP(iso);
+}
+
+function getCategoryById(id) {
+  return state.categories.find(c => c.id === id);
+}
+
+function navigate(screen, params = {}) {
+  state.ui.currentScreen = screen;
+  state.ui.params = params;
+  if (screen === 'home') state.ui.searchQuery = '';
+  saveState();
+  render();
+  window.scrollTo(0, 0);
+}
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+function openModal(html) {
+  const overlay = document.getElementById('modal');
+  const content = document.getElementById('modal-content');
+  content.innerHTML = '<div class="modal-handle"></div>' + html;
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('modal').addEventListener('click', (e) => {
+  if (e.target.id === 'modal') closeModal();
+});
+
+// =============================================================
+// === Stock operations ===
+// =============================================================
+
+function logStock(productId, op, deltaUnit, deltaSub, source, note) {
+  source = source || 'manual';
+  note = note || '';
+  const inv = getInventory(productId);
+  state.stockLogs.unshift({
+    id: uid('log'),
+    productId,
+    operation: op,
+    deltaUnit,
+    deltaSub,
+    sealedAfter: inv.sealedCount,
+    openedSubAfter: inv.openedSubCount,
+    source,
+    note,
+    createdAt: new Date().toISOString(),
+  });
+  if (state.stockLogs.length > 500) state.stockLogs = state.stockLogs.slice(0, 500);
+}
+
+function consume(productId) {
+  const product = state.products.find(p => p.id === productId);
+  if (!product) return;
+  let inv = state.inventory[productId];
+  if (!inv) inv = state.inventory[productId] = { sealedCount: 0, openedSubCount: 0, nearestExpiry: null };
+
+  if (product.hasNested) {
+    if (inv.openedSubCount > 0) {
+      inv.openedSubCount -= 1;
+      inv.lastUpdatedAt = new Date().toISOString();
+      logStock(productId, 'consume_sub', 0, -1);
+    } else if (inv.sealedCount > 0) {
+      inv.sealedCount -= 1;
+      inv.openedSubCount = product.subUnitsPerUnit - 1;
+      inv.lastUpdatedAt = new Date().toISOString();
+      logStock(productId, 'open_unit', -1, product.subUnitsPerUnit);
+      logStock(productId, 'consume_sub', 0, -1);
+    } else {
+      showToast('在庫がありません');
+      return;
+    }
+  } else {
+    if (inv.sealedCount > 0) {
+      inv.sealedCount -= 1;
+      inv.lastUpdatedAt = new Date().toISOString();
+      logStock(productId, 'consume_sub', 0, -1);
+    } else {
+      showToast('在庫がありません');
+      return;
+    }
+  }
+  checkAlerts(productId);
+  saveState();
+  render();
+}
+
+function refill(productId) {
+  const product = state.products.find(p => p.id === productId);
+  if (!product) return;
+  let inv = state.inventory[productId];
+  if (!inv) inv = state.inventory[productId] = { sealedCount: 0, openedSubCount: 0, nearestExpiry: null };
+
+  inv.sealedCount += 1;
+  inv.lastUpdatedAt = new Date().toISOString();
+  logStock(productId, 'refill_unit', 1, 0);
+  removeFromShoppingListIfRecovered(productId);
+  saveState();
+  showToast(product.hasNested ? '+1' + product.unit + ' (' + product.subUnitsPerUnit + product.subUnit + '分)' : '+1' + product.unit);
+  render();
+}
+
+function adjustOpenedSub(productId, delta) {
+  const product = state.products.find(p => p.id === productId);
+  if (!product || !product.hasNested) return;
+  const inv = state.inventory[productId] || (state.inventory[productId] = { sealedCount: 0, openedSubCount: 0, nearestExpiry: null });
+  const next = inv.openedSubCount + delta;
+  if (next < 0 || next > product.subUnitsPerUnit) return;
+  inv.openedSubCount = next;
+  inv.lastUpdatedAt = new Date().toISOString();
+  logStock(productId, delta > 0 ? 'adjust' : 'consume_sub', 0, delta);
+  if (delta < 0) checkAlerts(productId);
+  if (delta > 0) removeFromShoppingListIfRecovered(productId);
+  saveState();
+  render();
+}
+
+function adjustSealed(productId, delta) {
+  const product = state.products.find(p => p.id === productId);
+  if (!product) return;
+  const inv = state.inventory[productId] || (state.inventory[productId] = { sealedCount: 0, openedSubCount: 0, nearestExpiry: null });
+  const next = inv.sealedCount + delta;
+  if (next < 0) return;
+  inv.sealedCount = next;
+  inv.lastUpdatedAt = new Date().toISOString();
+  logStock(productId, delta > 0 ? 'refill_unit' : 'adjust', delta, 0);
+  if (delta > 0) removeFromShoppingListIfRecovered(productId);
+  if (delta < 0) checkAlerts(productId);
+  saveState();
+  render();
+}
+
+function openUnit(productId) {
+  const product = state.products.find(p => p.id === productId);
+  if (!product || !product.hasNested) return;
+  const inv = state.inventory[productId];
+  if (!inv || inv.sealedCount === 0) { showToast('未開封の在庫がありません'); return; }
+  if (inv.openedSubCount > 0) {
+    if (!confirm('開封中の' + product.unit + 'がまだあります。新しい' + product.unit + 'を開封しますか?')) return;
+  }
+  inv.sealedCount -= 1;
+  inv.openedSubCount += product.subUnitsPerUnit;
+  inv.lastUpdatedAt = new Date().toISOString();
+  logStock(productId, 'open_unit', -1, product.subUnitsPerUnit);
+  saveState();
+  showToast(product.unit + 'を1つ開封しました');
+  render();
+}
+
+function checkAlerts(productId) {
+  const product = state.products.find(p => p.id === productId);
+  if (!product) return;
+  const inv = getInventory(productId);
+  const total = getTotalSubUnits(product, inv);
+  const subUnit = product.hasNested ? product.subUnit : product.unit;
+
+  if (total === 0) {
+    addNotification('critical_stock', productId, product.name, '在庫が切れました', 'urgent');
+    addToShoppingList(productId, true);
+  } else if (total <= product.alertThreshold) {
+    addNotification('low_stock', productId, product.name, '残り' + total + subUnit + '。買い物リストに追加しました');
+    addToShoppingList(productId, false);
+  }
+}
+
+function addNotification(type, productId, title, body, urgency) {
+  urgency = urgency || 'normal';
+  const sixHoursAgo = Date.now() - 6 * 3600 * 1000;
+  const dup = state.notifications.find(n =>
+    n.productId === productId && n.type === type && new Date(n.createdAt).getTime() > sixHoursAgo
+  );
+  if (dup) return;
+  state.notifications.unshift({
+    id: uid('notif'),
+    type, productId, title, body,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  });
+  if (state.notifications.length > 100) state.notifications = state.notifications.slice(0, 100);
+}
+
+function addToShoppingList(productId, urgent) {
+  const existing = state.shoppingList.find(s => s.productId === productId && !s.isPurchased);
+  if (existing) {
+    if (urgent && !existing.isUrgent) existing.isUrgent = true;
+    return;
+  }
+  state.shoppingList.push({
+    id: uid('shop'),
+    productId,
+    quantityNeeded: 1,
+    isUrgent: urgent,
+    isPurchased: false,
+    autoGenerated: true,
+    createdAt: new Date().toISOString(),
+    purchasedAt: null,
+  });
+}
+
+function removeFromShoppingListIfRecovered(productId) {
+  const product = state.products.find(p => p.id === productId);
+  if (!product) return;
+  const total = getTotalSubUnits(product);
+  if (total > product.alertThreshold) {
+    state.shoppingList = state.shoppingList.filter(s =>
+      !(s.productId === productId && s.autoGenerated && !s.isPurchased)
+    );
+  }
+}
+
+function toggleShoppingItem(itemId) {
+  const item = state.shoppingList.find(s => s.id === itemId);
+  if (!item) return;
+  item.isPurchased = !item.isPurchased;
+  item.purchasedAt = item.isPurchased ? new Date().toISOString() : null;
+  saveState();
+  render();
+}
+
+function clearPurchasedItems() {
+  state.shoppingList = state.shoppingList.filter(s => !s.isPurchased);
+  saveState();
+  render();
+}
+
+function markAllNotificationsRead() {
+  state.notifications.forEach(n => n.isRead = true);
+  saveState();
+  render();
+}
+
+function getUnreadNotifCount() {
+  return state.notifications.filter(n => !n.isRead).length;
+}
+
+function getActiveShoppingCount() {
+  return state.shoppingList.filter(s => !s.isPurchased).length;
+}
+
+// =============================================================
+// === Render: Onboarding ===
+// =============================================================
+
+function renderOnboarding() {
+  return `
+    <div class="onboarding">
+      <div>
+        <div class="brand-tag">うちのストック</div>
+        <div class="brand-name">Stock<span class="dot">.</span></div>
+        <div class="lead">家のストックを<br>シンプルに把握・管理。</div>
+      </div>
+      <div class="spacer"></div>
+      <form id="onboarding-form">
+        <div class="form-group">
+          <label class="form-label">あなたの名前 <span class="req">*</span></label>
+          <input class="form-input" name="name" required maxlength="20" placeholder="例: まさき" />
+          <div class="form-help">家族の更新履歴に表示されます</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">アバターの色</label>
+          <div class="form-row-3" id="color-picker">
+            ${['#D4763A', '#6B8E78', '#9B7BA8', '#6B8AAE', '#C84B3A', '#E89B4A'].map((c, i) => `
+              <label style="position:relative;cursor:pointer;">
+                <input type="radio" name="color" value="${c}" ${i === 0 ? 'checked' : ''} style="position:absolute;opacity:0;" />
+                <div style="height:48px;border-radius:12px;background:${c};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;border:3px solid transparent;transition:border .15s;" class="color-swatch" data-color="${c}">${i === 0 ? '✓' : ''}</div>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">はじめる</button>
+      </form>
+      <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--text-4);">
+        Stage 1 (個人ローカル版) · データはこのブラウザに保存されます
+      </div>
+    </div>
+  `;
+}
+
+function attachOnboardingHandlers() {
+  const form = document.getElementById('onboarding-form');
+  if (!form) return;
+  form.addEventListener('change', (e) => {
+    if (e.target.name === 'color') {
+      form.querySelectorAll('.color-swatch').forEach(s => {
+        s.style.border = s.dataset.color === e.target.value ? '3px solid var(--text)' : '3px solid transparent';
+        s.textContent = s.dataset.color === e.target.value ? '✓' : '';
+      });
+    }
+  });
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    state.user = {
+      name: fd.get('name').trim(),
+      avatarColor: fd.get('color') || '#D4763A',
+      createdAt: new Date().toISOString(),
+    };
+    state.ui.currentScreen = 'home';
+    saveState();
+    render();
+  });
+}
+
+// =============================================================
+// === Render: Home ===
+// =============================================================
+
+function renderHome() {
+  const initial = state.user && state.user.name ? state.user.name[0] : '?';
+  const products = getFilteredProducts();
+  const cats = getCategoryCounts();
+
+  return `
+    <div class="top-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;">
+        <div>
+          <div class="greeting">おかえりなさい${state.user && state.user.name ? '、' + escapeHtml(state.user.name) : ''}</div>
+          <div class="title-main">うちの在庫</div>
+        </div>
+        <button class="avatar avatar-md" style="background:${(state.user && state.user.avatarColor) || 'var(--accent)'}" onclick="navigate('settings')">${escapeHtml(initial)}</button>
+      </div>
+    </div>
+    <div class="search-bar">
+      <span class="muted">🔍</span>
+      <input type="text" placeholder="商品を検索" value="${escapeHtml(state.ui.searchQuery)}" oninput="state.ui.searchQuery = this.value; renderHomeContent();" />
+    </div>
+    <div class="cat-tabs" id="cat-tabs">
+      ${renderCategoryTabs(cats)}
+    </div>
+    <div id="home-cards-container">
+      ${renderHomeCards(products)}
+    </div>
+    ${renderBottomNav('home')}
+  `;
+}
+
+function renderCategoryTabs(cats) {
+  const all = state.products.length;
+  const items = [{ id: 'all', name: 'すべて', icon: null, count: all }];
+  state.categories.forEach(c => items.push({
+    id: c.id, name: c.name, icon: c.icon, count: cats[c.id] || 0
+  }));
+  return items.map(c => `
+    <button class="cat-tab ${state.ui.selectedCategoryId === c.id ? 'active' : ''}" onclick="state.ui.selectedCategoryId = '${c.id}'; saveState(); renderHomeContent();">
+      ${c.icon ? CATEGORY_ICONS[c.icon] || '📦' : ''}
+      <span>${escapeHtml(c.name)}</span>
+      <span class="count">${c.count}</span>
+    </button>
+  `).join('');
+}
+
+function getCategoryCounts() {
+  const counts = {};
+  state.products.forEach(p => {
+    if (p.categoryId) counts[p.categoryId] = (counts[p.categoryId] || 0) + 1;
+  });
+  return counts;
+}
+
+function getFilteredProducts() {
+  let arr = [...state.products];
+  if (state.ui.selectedCategoryId !== 'all') {
+    arr = arr.filter(p => p.categoryId === state.ui.selectedCategoryId);
+  }
+  if (state.ui.searchQuery) {
+    const q = state.ui.searchQuery.toLowerCase();
+    arr = arr.filter(p => p.name.toLowerCase().includes(q));
+  }
+  // Sort: pinned first, then critical, then warn, then by name
+  arr.sort((a, b) => {
+    if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+    const ta = getTotalSubUnits(a); const tb = getTotalSubUnits(b);
+    const sa = getStatus(ta, a.alertThreshold);
+    const sb = getStatus(tb, b.alertThreshold);
+    const order = { danger: 0, warn: 1, ok: 2 };
+    if (order[sa] !== order[sb]) return order[sa] - order[sb];
+    return a.name.localeCompare(b.name);
+  });
+  return arr;
+}
+
+function togglePin(productId) {
+  const p = state.products.find(p => p.id === productId);
+  if (!p) return;
+  p.pinned = !p.pinned;
+  saveState();
+  showToast(p.pinned ? '📌 ピン留めしました' : 'ピン留めを解除しました');
+  if (state.ui.currentScreen === 'home') renderHomeContent();
+  else render();
+}
+
+function renderHomeCards(products) {
+  if (state.products.length === 0) {
+    return `
+      <div class="empty">
+        <div class="emoji">📦</div>
+        <div class="h">まだ商品がありません</div>
+        <div class="p">下の + ボタンから最初の商品を追加してみましょう</div>
+      </div>
+    `;
+  }
+  if (products.length === 0) {
+    return `
+      <div class="empty">
+        <div class="emoji">🔍</div>
+        <div class="h">該当する商品がありません</div>
+        <div class="p">検索条件を変えてみてください</div>
+      </div>
+    `;
+  }
+  const pinned = products.filter(p => p.pinned);
+  const unpinned = products.filter(p => !p.pinned);
+  let html = '';
+  if (pinned.length > 0) {
+    html += '<div class="pin-section-divider">📌 ピン留め</div>';
+    html += '<div class="cards-list" style="padding-top:0;padding-bottom:8px;">' + pinned.map(p => renderProductCard(p)).join('') + '</div>';
+  }
+  if (unpinned.length > 0) {
+    if (pinned.length > 0) html += '<div class="pin-section-divider">すべての商品</div>';
+    html += '<div class="cards-list"' + (pinned.length > 0 ? ' style="padding-top:0;"' : '') + '>' + unpinned.map(p => renderProductCard(p)).join('') + '</div>';
+  }
+  return html;
+}
+
+function renderProductCard(product) {
+  const inv = getInventory(product.id);
+  const total = getTotalSubUnits(product, inv);
+  const max = product.maxTotal;
+  const status = getStatus(total, product.alertThreshold);
+  const cat = getCategoryById(product.categoryId);
+  const subUnit = product.hasNested ? product.subUnit : product.unit;
+  const expiryDays = inv.nearestExpiry ? daysUntil(inv.nearestExpiry) : null;
+  const expWarn = expiryDays != null && expiryDays <= state.settings.expiryNoticeDays;
+
+  return `
+    <div class="product-card${product.pinned ? ' pinned' : ''}" onclick="navigate('detail', { productId: '${product.id}' })">
+      <div class="product-card-top">
+        <div style="flex:1;min-width:0;">
+          <div class="product-meta">
+            <span>${cat ? escapeHtml(cat.name) : 'カテゴリなし'}</span>
+            ${product.hasNested ? `<span class="nest-badge">${escapeHtml(product.unit)}入り</span>` : ''}
+            ${product.notes ? `<span class="memo-indicator" title="メモあり">📝</span>` : ''}
+          </div>
+          <div class="product-name">${escapeHtml(product.name)}</div>
+        </div>
+        <button class="pin-btn ${product.pinned ? 'pinned' : ''}" onclick="event.stopPropagation();togglePin('${product.id}')" title="${product.pinned ? 'ピンを外す' : 'ピン留め'}">${product.pinned ? '📌' : '📍'}</button>
+      </div>
+      <div class="product-card-bot">
+        <div>
+          ${product.hasNested ? `
+            <div class="stock-display">
+              <span class="stock-num ${status}">${inv.sealedCount}</span>
+              <span class="stock-unit">${escapeHtml(product.unit)}</span>
+              <span class="stock-divider">+</span>
+              <span class="stock-num ${status}" style="font-size:20px;">${inv.openedSubCount}</span>
+              <span class="stock-unit">${escapeHtml(product.subUnit)}</span>
+            </div>
+            <div class="stock-total">合計 ${total} ${escapeHtml(subUnit)}</div>
+          ` : `
+            <div class="stock-display">
+              <span class="stock-num ${status}">${total}</span>
+              <span class="stock-unit">/ ${max}${escapeHtml(product.unit)}</span>
+            </div>
+          `}
+          ${inv.nearestExpiry ? `
+            <div class="stock-expiry" style="color:${expWarn ? 'var(--warn)' : 'var(--text-3)'}">
+              <span>📅</span>
+              <span>${formatDateJP(inv.nearestExpiry)}${expiryDays != null ? ' (あと' + expiryDays + '日)' : ''}</span>
+            </div>
+          ` : ''}
+        </div>
+        <div class="stock-actions" onclick="event.stopPropagation()">
+          <button class="btn-circle minus" onclick="consume('${product.id}')">−</button>
+          <button class="btn-circle plus" onclick="refill('${product.id}')">+</button>
+        </div>
+      </div>
+      <div class="progress">
+        <div class="${status}" style="width:${Math.min(100, (total / max) * 100)}%"></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderHomeContent() {
+  const cats = getCategoryCounts();
+  const tabsEl = document.getElementById('cat-tabs');
+  if (tabsEl) tabsEl.innerHTML = renderCategoryTabs(cats);
+  const cardsEl = document.getElementById('home-cards-container');
+  if (cardsEl) cardsEl.innerHTML = renderHomeCards(getFilteredProducts());
+}
+
+// =============================================================
+// === Render: Detail ===
+// =============================================================
+
+function renderDetail() {
+  const productId = state.ui.params.productId;
+  const product = state.products.find(p => p.id === productId);
+  if (!product) {
+    setTimeout(() => navigate('home'), 0);
+    return '<div class="empty"><div class="emoji">❓</div><div class="h">商品が見つかりません</div></div>';
+  }
+  const inv = getInventory(product.id);
+  const total = getTotalSubUnits(product, inv);
+  const status = getStatus(total, product.alertThreshold);
+  const cat = getCategoryById(product.categoryId);
+  const subUnit = product.hasNested ? product.subUnit : product.unit;
+  const expiryDays = inv.nearestExpiry ? daysUntil(inv.nearestExpiry) : null;
+  const logs = state.stockLogs.filter(l => l.productId === product.id).slice(0, 8);
+
+  return `
+    <div class="page-header">
+      <button class="back" onclick="navigate('home')">← 戻る</button>
+      <span class="title">商品詳細</span>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <button class="pin-btn ${product.pinned ? 'pinned' : ''}" onclick="togglePin('${product.id}')" title="${product.pinned ? 'ピンを外す' : 'ピン留め'}">${product.pinned ? '📌' : '📍'}</button>
+        <button class="btn-text" onclick="openEditProductModal('${product.id}')">編集</button>
+      </div>
+    </div>
+    <div class="page-content">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+        <span style="font-size:12px;color:var(--accent);">${cat ? escapeHtml(cat.name) : ''}</span>
+        ${product.hasNested ? `<span class="nest-badge">${escapeHtml(product.unit)}入り</span>` : ''}
+        ${product.pinned ? `<span class="nest-badge" style="background:var(--accent);color:white;border-color:var(--accent);">📌 ピン留め中</span>` : ''}
+      </div>
+      <h2 class="serif" style="margin-bottom:10px;">${escapeHtml(product.name)}</h2>
+      ${product.notes ? `<div class="product-notes-display">${escapeHtml(product.notes)}</div>` : '<div style="margin-bottom:4px;"></div>'}
+
+      <div class="card">
+        <div class="center-stock">
+          <div class="label">合計残量</div>
+          <div class="num ${status}">${total}</div>
+          <div class="unit">${escapeHtml(subUnit)}</div>
+          <div style="font-size:11px;color:var(--text-4);margin-top:4px;">
+            満タンは${product.maxTotal}${escapeHtml(subUnit)}${product.hasNested ? ' (' + Math.ceil(product.maxTotal / product.subUnitsPerUnit) + product.unit + '分)' : ''}
+          </div>
+        </div>
+
+        ${product.hasNested ? `
+          <div class="unit-row">
+            <div class="unit-row-head">
+              <div class="h">未開封</div>
+              <div class="hint">+1で1${escapeHtml(product.unit)}補充</div>
+            </div>
+            <div class="unit-row-body">
+              <button class="btn-square minus" onclick="adjustSealed('${product.id}', -1)" ${inv.sealedCount === 0 ? 'disabled' : ''}>−</button>
+              <div class="center">
+                <span class="num">${inv.sealedCount}</span>
+                <span class="of">${escapeHtml(product.unit)}</span>
+              </div>
+              <button class="btn-square plus" onclick="adjustSealed('${product.id}', 1)">+</button>
+            </div>
+            ${inv.sealedCount > 0 ? `<button class="btn-text" style="margin-top:6px;font-size:11px;" onclick="openUnit('${product.id}')">📦 1${escapeHtml(product.unit)}を開封する</button>` : ''}
+          </div>
+
+          <div class="unit-row">
+            <div class="unit-row-head">
+              <div class="h">開封中の${escapeHtml(product.unit)}</div>
+              <div class="hint">−1で1${escapeHtml(product.subUnit)}消費</div>
+            </div>
+            <div class="unit-row-body">
+              <button class="btn-square minus" onclick="adjustOpenedSub('${product.id}', -1)" ${inv.openedSubCount === 0 ? 'disabled' : ''}>−</button>
+              <div class="center">
+                <span class="num ${status}">${inv.openedSubCount}</span>
+                <span class="of">/ ${product.subUnitsPerUnit} ${escapeHtml(product.subUnit)}</span>
+              </div>
+              <button class="btn-square plus" onclick="adjustOpenedSub('${product.id}', 1)" ${inv.openedSubCount >= product.subUnitsPerUnit ? 'disabled' : ''}>+</button>
+            </div>
+            <div class="progress" style="margin-top:8px;background:white;">
+              <div class="${status}" style="width:${(inv.openedSubCount / product.subUnitsPerUnit) * 100}%"></div>
+            </div>
+          </div>
+        ` : `
+          <div class="unit-row">
+            <div class="unit-row-body">
+              <button class="btn-square minus" onclick="consume('${product.id}')" ${inv.sealedCount === 0 ? 'disabled' : ''}>−</button>
+              <div class="center">
+                <span class="num ${status}">${inv.sealedCount}</span>
+                <span class="of">/ ${product.maxTotal} ${escapeHtml(product.unit)}</span>
+              </div>
+              <button class="btn-square plus" onclick="refill('${product.id}')">+</button>
+            </div>
+          </div>
+        `}
+
+        ${status === 'danger' ? `
+          <div class="alert-bar danger" style="margin-top:12px;">
+            ⚠️ <span>在庫が切れています。買い物リストに追加されました</span>
+          </div>
+        ` : status === 'warn' ? `
+          <div class="alert-bar warn" style="margin-top:12px;">
+            ⚠️ <span>残り${total}${escapeHtml(subUnit)}。少なくなっています</span>
+          </div>
+        ` : ''}
+      </div>
+
+      ${inv.nearestExpiry ? `
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span>📅</span>
+            <div style="font-size:12px;font-weight:700;">賞味期限</div>
+          </div>
+          <div style="font-size:14px;">${formatDateJP(inv.nearestExpiry)}</div>
+          <div style="font-size:10px;color:${expiryDays != null && expiryDays <= state.settings.expiryNoticeDays ? 'var(--warn)' : 'var(--text-4)'};margin-top:2px;">
+            ${expiryDays != null ? (expiryDays >= 0 ? 'あと ' + expiryDays + ' 日' : Math.abs(expiryDays) + '日経過') : ''}
+          </div>
+        </div>
+      ` : ''}
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:12px;font-weight:700;">更新履歴</div>
+          <button class="btn-text" onclick="navigate('history', { productId: '${product.id}' })" style="font-size:10px;">すべて見る ›</button>
+        </div>
+        ${logs.length === 0 ? '<div style="font-size:11px;color:var(--text-4);">まだ履歴がありません</div>' :
+          logs.map(l => renderLogItem(l, product)).join('')
+        }
+      </div>
+
+      <button class="btn-danger-ghost" onclick="confirmDeleteProduct('${product.id}')">
+        🗑 この商品を削除
+      </button>
+    </div>
+    ${renderBottomNav('home')}
+  `;
+}
+
+function renderLogItem(l, product) {
+  const subUnit = product.hasNested ? product.subUnit : product.unit;
+  let text = '';
+  if (l.operation === 'consume_sub') text = '−1' + subUnit + ' 消費';
+  else if (l.operation === 'refill_unit') text = '+' + Math.abs(l.deltaUnit) + product.unit + ' 補充';
+  else if (l.operation === 'open_unit') text = product.unit + 'を開封 (' + product.subUnitsPerUnit + product.subUnit + 'に)';
+  else if (l.operation === 'adjust') text = (l.deltaSub !== 0 ? (l.deltaSub > 0 ? '+' : '') + l.deltaSub + subUnit : (l.deltaUnit > 0 ? '+' : '') + l.deltaUnit + product.unit) + ' 調整';
+  const userName = state.user && state.user.name ? state.user.name[0] : '?';
+  const userColor = (state.user && state.user.avatarColor) || 'var(--accent)';
+  return `
+    <div class="history-item">
+      <span class="avatar avatar-sm" style="width:18px;height:18px;font-size:9px;background:${userColor};">${userName}</span>
+      <span class="history-text">${escapeHtml(text)}</span>
+      <span class="history-time">${relativeTime(l.createdAt)}</span>
+    </div>
+  `;
+}
+
+function confirmDeleteProduct(productId) {
+  const product = state.products.find(p => p.id === productId);
+  if (!product) return;
+  if (confirm('「' + product.name + '」を削除しますか?\n在庫データ・履歴もすべて削除されます。')) {
+    state.products = state.products.filter(p => p.id !== productId);
+    delete state.inventory[productId];
+    state.stockLogs = state.stockLogs.filter(l => l.productId !== productId);
+    state.shoppingList = state.shoppingList.filter(s => s.productId !== productId);
+    state.notifications = state.notifications.filter(n => n.productId !== productId);
+    saveState();
+    showToast('削除しました');
+    navigate('home');
+  }
+}
+
+// =============================================================
+// === Render: Add (method selection) ===
+// =============================================================
+
+function renderAdd() {
+  return `
+    <div class="page-header">
+      <button class="back" onclick="navigate('home')">×</button>
+      <span class="title">商品を追加</span>
+      <span style="width:30px;"></span>
+    </div>
+    <div class="page-content">
+      <h2 class="serif" style="margin-bottom:4px;">どうやって<br/>追加しますか?</h2>
+      <p style="font-size:12px;color:var(--text-3);margin-bottom:20px;">Stage 1では手動入力のみ対応</p>
+
+      <div class="section-title">1点ずつ追加</div>
+      <button class="add-method primary" onclick="openAddProductModal()">
+        <div class="icon-wrap">✏️</div>
+        <div style="flex:1;">
+          <div class="label">手動で入力</div>
+          <div class="meta">商品名・数量・単位を直接入力</div>
+        </div>
+        <span style="color:var(--text-4);">›</span>
+      </button>
+
+      <div class="section-title" style="margin-top:24px;">後日対応予定 (Phase 2)</div>
+      <button class="add-method" disabled style="opacity:0.5;cursor:not-allowed;">
+        <div class="icon-wrap">📷</div>
+        <div style="flex:1;"><div class="label">バーコード読み取り</div><div class="meta">JANコードから商品名を自動取得</div></div>
+      </button>
+      <div style="height:8px;"></div>
+      <button class="add-method" disabled style="opacity:0.5;cursor:not-allowed;">
+        <div class="icon-wrap">🛒</div>
+        <div style="flex:1;"><div class="label">Amazon注文画面</div><div class="meta">注文履歴のスクショから一括取込</div></div>
+      </button>
+      <div style="height:8px;"></div>
+      <button class="add-method" disabled style="opacity:0.5;cursor:not-allowed;">
+        <div class="icon-wrap">🧾</div>
+        <div style="flex:1;"><div class="label">レシート撮影</div><div class="meta">複数商品を一度に登録</div></div>
+      </button>
+    </div>
+    ${renderBottomNav('add')}
+  `;
+}
+
+// =============================================================
+// === Add/Edit Product Modal ===
+// =============================================================
+
+function openAddProductModal(productId) {
+  productId = productId || null;
+  const editing = productId ? state.products.find(p => p.id === productId) : null;
+  const inv = editing ? getInventory(editing.id) : { sealedCount: 0, openedSubCount: 0, nearestExpiry: '' };
+  const hasNested = editing ? editing.hasNested : false;
+
+  const html = `
+    <div class="modal-title">${editing ? '商品を編集' : '商品を追加'}</div>
+    <form id="product-form">
+      <input type="hidden" name="productId" value="${editing ? editing.id : ''}" />
+
+      <div class="form-group">
+        <label class="form-label">商品名 <span class="req">*</span></label>
+        <input class="form-input" name="name" required maxlength="60" value="${editing ? escapeHtml(editing.name) : ''}" placeholder="例: ピュリナ ワン サーモン" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">カテゴリ</label>
+        <select class="form-select" name="categoryId">
+          <option value="">選択してください</option>
+          ${state.categories.map(c => `
+            <option value="${c.id}" ${editing && editing.categoryId === c.id ? 'selected' : ''}>${CATEGORY_ICONS[c.icon] || ''} ${escapeHtml(c.name)}</option>
+          `).join('')}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">単位の種類</label>
+        <div class="toggle-group" id="nested-toggle">
+          <button type="button" class="toggle-btn ${!hasNested ? 'active' : ''}" data-nested="false">単一 (袋・缶・個など)</button>
+          <button type="button" class="toggle-btn ${hasNested ? 'active' : ''}" data-nested="true">階層 (箱+袋など)</button>
+        </div>
+        <input type="hidden" name="hasNested" value="${hasNested}" />
+      </div>
+
+      <div id="single-unit-fields" style="display:${hasNested ? 'none' : 'block'};">
+        <div class="form-group">
+          <label class="form-label">単位 <span class="req">*</span></label>
+          <input class="form-input" name="unit" value="${editing ? escapeHtml(editing.unit) : '袋'}" placeholder="例: 袋、缶、本" />
+          <div class="form-help">この商品を数える単位</div>
+        </div>
+      </div>
+
+      <div id="nested-unit-fields" style="display:${hasNested ? 'block' : 'none'};">
+        <div class="form-row">
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">大単位 <span class="req">*</span></label>
+            <input class="form-input" name="unit_nested" value="${editing && editing.hasNested ? escapeHtml(editing.unit) : '箱'}" placeholder="箱" />
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">小単位 <span class="req">*</span></label>
+            <input class="form-input" name="subUnit" value="${editing && editing.hasNested ? escapeHtml(editing.subUnit || '') : '袋'}" placeholder="袋" />
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:14px;">
+          <label class="form-label">1大単位あたりの小単位数 <span class="req">*</span></label>
+          <input class="form-input" type="number" name="subUnitsPerUnit" min="1" max="999" value="${editing && editing.hasNested ? editing.subUnitsPerUnit : 10}" />
+          <div class="form-help">例: 1箱に10袋入っている → 10</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">満タンの小単位数</label>
+          <input class="form-input" type="number" name="maxTotal" min="1" max="9999" value="${editing ? editing.maxTotal : 10}" />
+          <div class="form-help">満タン状態の総数</div>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">アラート閾値</label>
+          <input class="form-input" type="number" name="alertThreshold" min="0" max="9999" value="${editing ? editing.alertThreshold : 2}" />
+          <div class="form-help">この数以下で警告</div>
+        </div>
+      </div>
+
+      <hr/>
+      <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:10px;">現在の在庫</div>
+
+      <div id="initial-single" style="display:${hasNested ? 'none' : 'block'};">
+        <div class="form-group">
+          <label class="form-label">現在の数量</label>
+          <input class="form-input" type="number" name="initialSealed" min="0" value="${inv.sealedCount}" />
+        </div>
+      </div>
+
+      <div id="initial-nested" style="display:${hasNested ? 'block' : 'none'};">
+        <div class="form-row">
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">未開封数</label>
+            <input class="form-input" type="number" name="initialSealedNested" min="0" value="${inv.sealedCount}" />
+            <div class="form-help">未開封の大単位数</div>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">開封中の残数</label>
+            <input class="form-input" type="number" name="initialOpenedSub" min="0" value="${inv.openedSubCount}" />
+            <div class="form-help">開封済みの小単位数</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">賞味期限 (任意)</label>
+        <input class="form-input" type="date" name="nearestExpiry" value="${inv.nearestExpiry || ''}" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">メモ (任意)</label>
+        <textarea class="form-textarea" name="notes" maxlength="500" placeholder="例: 440g × 10袋&#10;Amazon定期おトク便で月1回購入&#10;しまう場所: パントリー上段">${editing ? escapeHtml(editing.notes || '') : ''}</textarea>
+        <div class="form-help">複数行可・最大500文字。商品の詳細・購入先・しまう場所などを自由に</div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button type="button" class="btn-secondary" onclick="closeModal()">キャンセル</button>
+        <button type="submit" class="btn-primary">${editing ? '更新する' : '追加する'}</button>
+      </div>
+    </form>
+  `;
+
+  openModal(html);
+
+  const toggle = document.getElementById('nested-toggle');
+  const hiddenInput = document.querySelector('input[name="hasNested"]');
+  toggle.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const isNested = btn.dataset.nested === 'true';
+      hiddenInput.value = isNested;
+      toggle.querySelectorAll('.toggle-btn').forEach(b => b.classList.toggle('active', b === btn));
+      document.getElementById('single-unit-fields').style.display = isNested ? 'none' : 'block';
+      document.getElementById('nested-unit-fields').style.display = isNested ? 'block' : 'none';
+      document.getElementById('initial-single').style.display = isNested ? 'none' : 'block';
+      document.getElementById('initial-nested').style.display = isNested ? 'block' : 'none';
+    });
+  });
+
+  document.getElementById('product-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const isNested = fd.get('hasNested') === 'true';
+    const pid = fd.get('productId') || uid('prod');
+    const isEdit = !!editing;
+
+    const product = {
+      id: pid,
+      name: fd.get('name').trim(),
+      categoryId: fd.get('categoryId') || null,
+      janCode: null,
+      hasNested: isNested,
+      unit: isNested ? fd.get('unit_nested').trim() : fd.get('unit').trim(),
+      subUnit: isNested ? fd.get('subUnit').trim() : null,
+      subUnitsPerUnit: isNested ? parseInt(fd.get('subUnitsPerUnit'), 10) : null,
+      maxTotal: parseInt(fd.get('maxTotal'), 10),
+      alertThreshold: parseInt(fd.get('alertThreshold'), 10),
+      notes: (fd.get('notes') || '').trim(),
+      pinned: editing ? !!editing.pinned : false,
+      createdAt: editing ? editing.createdAt : new Date().toISOString(),
+    };
+
+    if (!product.name) { showToast('商品名を入力してください'); return; }
+    if (!product.unit) { showToast('単位を入力してください'); return; }
+    if (isNested && !product.subUnit) { showToast('小単位を入力してください'); return; }
+    if (isNested && (!product.subUnitsPerUnit || product.subUnitsPerUnit < 1)) { showToast('小単位数を正しく入力してください'); return; }
+
+    const sealedCount = isNested
+      ? parseInt(fd.get('initialSealedNested') || '0', 10)
+      : parseInt(fd.get('initialSealed') || '0', 10);
+    const openedSubCount = isNested ? parseInt(fd.get('initialOpenedSub') || '0', 10) : 0;
+    const nearestExpiry = fd.get('nearestExpiry') || null;
+
+    if (isEdit) {
+      const idx = state.products.findIndex(p => p.id === pid);
+      state.products[idx] = product;
+    } else {
+      state.products.push(product);
+    }
+    state.inventory[pid] = {
+      sealedCount,
+      openedSubCount,
+      nearestExpiry,
+      lastUpdatedAt: new Date().toISOString(),
+    };
+    if (!isEdit) {
+      logStock(pid, 'adjust', sealedCount, openedSubCount, 'manual', '初期登録');
+    }
+    saveState();
+    closeModal();
+    showToast(isEdit ? '更新しました' : '追加しました');
+    if (isEdit) render();
+    else navigate('home');
+  });
+}
+
+function openEditProductModal(productId) {
+  openAddProductModal(productId);
+}
+
+// =============================================================
+// === Render: Shopping ===
+// =============================================================
+
+function renderShopping() {
+  const active = state.shoppingList.filter(s => !s.isPurchased);
+  const purchased = state.shoppingList.filter(s => s.isPurchased);
+  const urgent = active.filter(s => s.isUrgent);
+  const normal = active.filter(s => !s.isUrgent);
+
+  return `
+    <div class="top-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+        <div>
+          <div class="greeting">残数から自動生成</div>
+          <div class="title-main">買い物リスト</div>
+        </div>
+        <div style="font-family:'DM Serif Display',serif;font-size:32px;color:var(--accent);">${active.length}</div>
+      </div>
+    </div>
+    <div class="page-content" style="padding-top:8px;">
+      ${active.length === 0 && purchased.length === 0 ? `
+        <div class="empty">
+          <div class="emoji">🛒</div>
+          <div class="h">買い物リストは空です</div>
+          <div class="p">在庫が閾値を下回ると自動で追加されます</div>
+        </div>
+      ` : `
+        ${urgent.length > 0 ? `
+          <div class="shop-section">
+            <div class="shop-section-h danger">急いで買う</div>
+            ${urgent.map(s => renderShopItem(s, 'danger')).join('')}
+          </div>
+        ` : ''}
+        ${normal.length > 0 ? `
+          <div class="shop-section">
+            <div class="shop-section-h warn">そろそろ</div>
+            ${normal.map(s => renderShopItem(s, 'warn')).join('')}
+          </div>
+        ` : ''}
+        ${purchased.length > 0 ? `
+          <div class="shop-section">
+            <div class="shop-section-h warn">購入済み</div>
+            ${purchased.map(s => renderShopItem(s, 'warn')).join('')}
+            <button class="btn-danger-ghost" style="margin-top:4px;" onclick="clearPurchasedItems()">🗑 購入済みをクリア</button>
+          </div>
+        ` : ''}
+      `}
+    </div>
+    ${renderBottomNav('cart')}
+  `;
+}
+
+function renderShopItem(s, color) {
+  const product = state.products.find(p => p.id === s.productId);
+  if (!product) return '';
+  const cat = getCategoryById(product.categoryId);
+  return `
+    <button class="shop-item ${s.isPurchased ? 'purchased' : ''}" onclick="toggleShoppingItem('${s.id}')">
+      <span class="shop-check ${s.isPurchased ? 'checked' : ''}">${s.isPurchased ? '✓' : ''}</span>
+      <div class="shop-item-body">
+        <div class="shop-item-cat">${cat ? escapeHtml(cat.name) : ''}</div>
+        <div class="shop-item-name name">${escapeHtml(product.name)}</div>
+      </div>
+      <div class="shop-item-qty ${color}">×${s.quantityNeeded}</div>
+    </button>
+  `;
+}
+
+// =============================================================
+// === Render: Notifications ===
+// =============================================================
+
+function renderNotifications() {
+  return `
+    <div class="top-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+        <div>
+          <div class="greeting">最近の更新</div>
+          <div class="title-main">お知らせ</div>
+        </div>
+        ${getUnreadNotifCount() > 0 ? `<button class="btn-text" onclick="markAllNotificationsRead()">すべて既読</button>` : ''}
+      </div>
+    </div>
+    <div class="page-content" style="padding-top:8px;">
+      ${state.notifications.length === 0 ? `
+        <div class="empty">
+          <div class="emoji">🔔</div>
+          <div class="h">通知はありません</div>
+          <div class="p">残数アラートや賞味期限の通知がここに表示されます</div>
+        </div>
+      ` : state.notifications.slice(0, 30).map(n => renderNotifItem(n)).join('')}
+    </div>
+    ${renderBottomNav('bell')}
+  `;
+}
+
+function renderNotifItem(n) {
+  const iconMap = {
+    critical_stock: { wrap: 'danger', icon: '⚠️' },
+    low_stock: { wrap: 'warn', icon: '⚠️' },
+    expiry_soon: { wrap: 'expiry', icon: '📅' },
+    refill_done: { wrap: 'ok', icon: '✓' },
+  };
+  const m = iconMap[n.type] || { wrap: 'warn', icon: '🔔' };
+  return `
+    <div class="notif-item" ${!n.isRead ? 'style="background:var(--bg-warm);"' : ''} onclick="${n.productId ? `navigate('detail', { productId: '${n.productId}' })` : ''}">
+      <div class="notif-icon-wrap ${m.wrap}">${m.icon}</div>
+      <div class="notif-body">
+        <div class="notif-title-row">
+          <div class="notif-title">${escapeHtml(n.title)}</div>
+          <div class="notif-time">${relativeTime(n.createdAt)}</div>
+        </div>
+        <div class="notif-text">${escapeHtml(n.body)}</div>
+      </div>
+    </div>
+  `;
+}
+
+// =============================================================
+// === Render: Settings ===
+// =============================================================
+
+function renderSettings() {
+  const userName = state.user && state.user.name ? state.user.name : '';
+  const userInitial = userName ? userName[0] : '?';
+  const userColor = (state.user && state.user.avatarColor) || 'var(--accent)';
+  return `
+    <div class="page-header">
+      <button class="back" onclick="navigate('home')">←</button>
+      <span class="title">設定</span>
+      <span style="width:30px;"></span>
+    </div>
+    <div class="page-content">
+      <div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+        <span class="avatar avatar-lg" style="background:${userColor};">${escapeHtml(userInitial)}</span>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;">${escapeHtml(userName)}</div>
+          <div style="font-size:11px;color:var(--text-3);">Stage 1 (ローカル版・1人で使用中)</div>
+        </div>
+        <button class="btn-text" onclick="openEditProfileModal()">編集</button>
+      </div>
+
+      <div class="settings-section">
+        <div class="section-title">設定</div>
+        <div class="settings-list">
+          <button class="settings-row" onclick="navigate('categories')">
+            <div class="icon-wrap">🏷️</div>
+            <div class="label">カテゴリ管理</div>
+            <div class="meta">${state.categories.length}種類</div>
+            <span class="muted">›</span>
+          </button>
+          <button class="settings-row" onclick="openAlertSettingsModal()">
+            <div class="icon-wrap">⚠️</div>
+            <div class="label">残数アラート</div>
+            <div class="meta">既定: ${state.settings.alertThresholdDefault}以下</div>
+            <span class="muted">›</span>
+          </button>
+          <button class="settings-row" onclick="openExpirySettingsModal()">
+            <div class="icon-wrap">📅</div>
+            <div class="label">賞味期限通知</div>
+            <div class="meta">${state.settings.expiryNoticeDays}日前から</div>
+            <span class="muted">›</span>
+          </button>
+          <button class="settings-row" onclick="navigate('history', {})">
+            <div class="icon-wrap">📋</div>
+            <div class="label">操作履歴</div>
+            <div class="meta">${state.stockLogs.length}件</div>
+            <span class="muted">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="section-title">データ</div>
+        <div class="settings-list">
+          <button class="settings-row" onclick="exportData()">
+            <div class="icon-wrap">⬇️</div>
+            <div class="label">データをエクスポート (JSON)</div>
+            <span class="muted">›</span>
+          </button>
+          <button class="settings-row" onclick="importData()">
+            <div class="icon-wrap">⬆️</div>
+            <div class="label">データをインポート</div>
+            <span class="muted">›</span>
+          </button>
+          <button class="settings-row" onclick="confirmResetData()" style="color:var(--danger);">
+            <div class="icon-wrap" style="background:var(--danger-bg);">🗑</div>
+            <div class="label">すべてのデータを削除</div>
+            <span class="muted">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="section-title">アプリ情報</div>
+        <div class="settings-list">
+          <div class="settings-row">
+            <div class="icon-wrap">ℹ️</div>
+            <div class="label">バージョン</div>
+            <div class="meta">v0.2.0 (Stage 1+)</div>
+          </div>
+          <div class="settings-row">
+            <div class="icon-wrap">💾</div>
+            <div class="label">保存先</div>
+            <div class="meta">このブラウザ</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;font-size:10px;color:var(--text-4);margin-top:24px;">
+        Stock. v0.2.0 · Stage 1 (LocalStorage)
+      </div>
+    </div>
+    ${renderBottomNav('settings')}
+  `;
+}
+
+function openEditProfileModal() {
+  const userColor = (state.user && state.user.avatarColor) || '#D4763A';
+  const userName = (state.user && state.user.name) || '';
+  openModal(`
+    <div class="modal-title">プロフィール編集</div>
+    <form id="profile-form">
+      <div class="form-group">
+        <label class="form-label">名前</label>
+        <input class="form-input" name="name" required maxlength="20" value="${escapeHtml(userName)}" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">アバターの色</label>
+        <div class="form-row-3" id="profile-color-picker">
+          ${['#D4763A', '#6B8E78', '#9B7BA8', '#6B8AAE', '#C84B3A', '#E89B4A'].map(c => `
+            <label style="position:relative;cursor:pointer;">
+              <input type="radio" name="color" value="${c}" ${userColor === c ? 'checked' : ''} style="position:absolute;opacity:0;" />
+              <div style="height:48px;border-radius:12px;background:${c};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;border:3px solid ${userColor === c ? 'var(--text)' : 'transparent'};" class="color-swatch" data-color="${c}">${userColor === c ? '✓' : ''}</div>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn-secondary" onclick="closeModal()">キャンセル</button>
+        <button type="submit" class="btn-primary">保存</button>
+      </div>
+    </form>
+  `);
+  const form = document.getElementById('profile-form');
+  form.addEventListener('change', (e) => {
+    if (e.target.name === 'color') {
+      form.querySelectorAll('.color-swatch').forEach(s => {
+        s.style.border = s.dataset.color === e.target.value ? '3px solid var(--text)' : '3px solid transparent';
+        s.textContent = s.dataset.color === e.target.value ? '✓' : '';
+      });
+    }
+  });
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    state.user.name = fd.get('name').trim();
+    state.user.avatarColor = fd.get('color');
+    saveState();
+    closeModal();
+    showToast('保存しました');
+    render();
+  });
+}
+
+function openAlertSettingsModal() {
+  openModal(`
+    <div class="modal-title">残数アラート</div>
+    <div class="form-group">
+      <label class="form-label">既定のアラート閾値</label>
+      <input class="form-input" type="number" id="alert-threshold-input" min="0" value="${state.settings.alertThresholdDefault}" />
+      <div class="form-help">新しい商品を追加する時のデフォルト値。残数がこの数以下になると通知されます。</div>
+    </div>
+    <button class="btn-primary" onclick="saveAlertSettings()">保存</button>
+  `);
+}
+
+function saveAlertSettings() {
+  const v = parseInt(document.getElementById('alert-threshold-input').value, 10);
+  if (isNaN(v) || v < 0) { showToast('正しい数値を入力してください'); return; }
+  state.settings.alertThresholdDefault = v;
+  saveState();
+  closeModal();
+  showToast('保存しました');
+  render();
+}
+
+function openExpirySettingsModal() {
+  openModal(`
+    <div class="modal-title">賞味期限通知</div>
+    <div class="form-group">
+      <label class="form-label">何日前から通知するか</label>
+      <input class="form-input" type="number" id="expiry-days-input" min="1" max="365" value="${state.settings.expiryNoticeDays}" />
+      <div class="form-help">賞味期限がこの日数以内になると通知されます。</div>
+    </div>
+    <button class="btn-primary" onclick="saveExpirySettings()">保存</button>
+  `);
+}
+
+function saveExpirySettings() {
+  const v = parseInt(document.getElementById('expiry-days-input').value, 10);
+  if (isNaN(v) || v < 1) { showToast('1以上の数値を入力してください'); return; }
+  state.settings.expiryNoticeDays = v;
+  saveState();
+  closeModal();
+  showToast('保存しました');
+  render();
+}
+
+// =============================================================
+// === Render: Categories ===
+// =============================================================
+
+function renderCategories() {
+  return `
+    <div class="page-header">
+      <button class="back" onclick="navigate('settings')">←</button>
+      <span class="title">カテゴリ管理</span>
+      <button class="btn-text" onclick="openAddCategoryModal()">+ 追加</button>
+    </div>
+    <div class="page-content">
+      <div class="settings-list">
+        ${state.categories.map(c => {
+          const count = state.products.filter(p => p.categoryId === c.id).length;
+          return `
+            <button class="settings-row" onclick="openEditCategoryModal('${c.id}')">
+              <div class="icon-wrap" style="font-size:18px;">${CATEGORY_ICONS[c.icon] || '📦'}</div>
+              <div class="label">${escapeHtml(c.name)}</div>
+              <div class="meta">${count}件</div>
+              <span class="muted">›</span>
+            </button>
+          `;
+        }).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text-4);margin-top:12px;text-align:center;">
+        商品が紐付いているカテゴリは削除できません
+      </div>
+    </div>
+    ${renderBottomNav('settings')}
+  `;
+}
+
+function openAddCategoryModal() {
+  renderCategoryModal(null);
+}
+function openEditCategoryModal(id) {
+  renderCategoryModal(state.categories.find(c => c.id === id));
+}
+
+function renderCategoryModal(editing) {
+  const iconKeys = Object.keys(CATEGORY_ICONS);
+  openModal(`
+    <div class="modal-title">${editing ? 'カテゴリを編集' : 'カテゴリを追加'}</div>
+    <form id="cat-form">
+      <input type="hidden" name="id" value="${editing ? editing.id : ''}" />
+      <div class="form-group">
+        <label class="form-label">名前 <span class="req">*</span></label>
+        <input class="form-input" name="name" required maxlength="20" value="${editing ? escapeHtml(editing.name) : ''}" placeholder="例: 食品" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">アイコン</label>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;">
+          ${iconKeys.map(k => `
+            <label style="position:relative;cursor:pointer;">
+              <input type="radio" name="icon" value="${k}" ${editing && editing.icon === k ? 'checked' : (!editing && k === 'other' ? 'checked' : '')} style="position:absolute;opacity:0;" />
+              <div style="height:44px;border-radius:10px;background:var(--bg-alt);display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid ${(editing && editing.icon === k) || (!editing && k === 'other') ? 'var(--accent)' : 'transparent'};" class="icon-swatch" data-icon="${k}">${CATEGORY_ICONS[k]}</div>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        ${editing ? `<button type="button" class="btn-secondary" style="color:var(--danger);" onclick="confirmDeleteCategory('${editing.id}')">削除</button>` : `<button type="button" class="btn-secondary" onclick="closeModal()">キャンセル</button>`}
+        <button type="submit" class="btn-primary">${editing ? '更新' : '追加'}</button>
+      </div>
+    </form>
+  `);
+  const form = document.getElementById('cat-form');
+  form.addEventListener('change', (e) => {
+    if (e.target.name === 'icon') {
+      form.querySelectorAll('.icon-swatch').forEach(s => {
+        s.style.border = s.dataset.icon === e.target.value ? '2px solid var(--accent)' : '2px solid transparent';
+      });
+    }
+  });
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const id = fd.get('id') || uid('cat');
+    const name = fd.get('name').trim();
+    const icon = fd.get('icon') || 'other';
+    if (!name) { showToast('名前を入力してください'); return; }
+    if (editing) {
+      const idx = state.categories.findIndex(c => c.id === id);
+      state.categories[idx] = Object.assign({}, editing, { name, icon });
+    } else {
+      state.categories.push({ id, name, icon, sortOrder: state.categories.length + 1 });
+    }
+    saveState();
+    closeModal();
+    showToast(editing ? '更新しました' : '追加しました');
+    render();
+  });
+}
+
+function confirmDeleteCategory(id) {
+  const cat = state.categories.find(c => c.id === id);
+  const count = state.products.filter(p => p.categoryId === id).length;
+  if (count > 0) { showToast(count + '件の商品が紐付いているため削除できません'); return; }
+  if (!confirm('カテゴリ「' + cat.name + '」を削除しますか?')) return;
+  state.categories = state.categories.filter(c => c.id !== id);
+  saveState();
+  closeModal();
+  showToast('削除しました');
+  render();
+}
+
+// =============================================================
+// === Data Export/Import/Reset ===
+// =============================================================
+
+function exportData() {
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'stock-data-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('エクスポートしました');
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!confirm('現在のデータを上書きします。よろしいですか?')) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        if (!imported.products || !imported.categories) { showToast('無効なファイルです'); return; }
+        state = imported;
+        state.ui = state.ui || {};
+        state.ui.currentScreen = 'home';
+        if (!state.ui.historyRange) state.ui.historyRange = 'all';
+        saveState();
+        showToast('インポートしました');
+        render();
+      } catch (err) {
+        showToast('読み込みエラー: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function confirmResetData() {
+  if (!confirm('すべてのデータを削除します。\nこの操作は取り消せません。\n本当に実行しますか?')) return;
+  if (!confirm('もう一度確認します。本当に削除しますか?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = createInitialState();
+  saveState();
+  showToast('削除しました');
+  render();
+}
+
+// =============================================================
+// === Render: History (full log page) ===
+// =============================================================
+
+function renderHistory() {
+  const filterProductId = state.ui.params.productId || null;
+  const filterRange = state.ui.historyRange || 'all';
+
+  let logs = state.stockLogs.slice();
+  if (filterProductId) {
+    logs = logs.filter(l => l.productId === filterProductId);
+  }
+  const now = Date.now();
+  if (filterRange === '7d') {
+    logs = logs.filter(l => now - new Date(l.createdAt).getTime() <= 7 * 86400 * 1000);
+  } else if (filterRange === '30d') {
+    logs = logs.filter(l => now - new Date(l.createdAt).getTime() <= 30 * 86400 * 1000);
+  }
+
+  // Group by day
+  const groups = {};
+  logs.forEach(l => {
+    const d = new Date(l.createdAt);
+    const key = d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(l);
+  });
+  const dayKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+  const filteredProduct = filterProductId ? state.products.find(p => p.id === filterProductId) : null;
+  const productsWithLogs = state.products.filter(p =>
+    state.stockLogs.some(l => l.productId === p.id)
+  ).slice().sort((a, b) => a.name.localeCompare(b.name));
+
+  const backTarget = filterProductId
+    ? "navigate('detail', { productId: '" + filterProductId + "' })"
+    : "navigate('settings')";
+
+  const rangeLabel = filterRange === '7d' ? '(直近7日間)'
+    : filterRange === '30d' ? '(直近30日間)'
+    : '(全期間)';
+
+  let filterRight;
+  if (filterProductId) {
+    filterRight = '<button class="cat-tab" onclick="navigate(\'history\', {})" style="background:var(--bg-alt);"><span>✕ 商品フィルタ解除</span></button>';
+  } else {
+    filterRight = '<select class="form-select" onchange="if(this.value){navigate(\'history\',{productId:this.value})}">'
+      + '<option value="">商品で絞り込み</option>'
+      + productsWithLogs.map(p => '<option value="' + p.id + '">' + escapeHtml(p.name) + '</option>').join('')
+      + '</select>';
+  }
+
+  let body;
+  if (logs.length === 0) {
+    body = `
+      <div class="history-empty">
+        <div style="font-size:36px;margin-bottom:10px;">📋</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text-2);margin-bottom:4px;">履歴がありません</div>
+        <div style="font-size:11px;">在庫を増減すると、ここに記録されます</div>
+      </div>
+    `;
+  } else {
+    body = dayKeys.map(day => `
+      <div class="history-day-section">
+        <div class="history-day-head">${day} (${groups[day].length}件)</div>
+        ${groups[day].map(l => renderHistoryCard(l)).join('')}
+      </div>
+    `).join('');
+  }
+
+  return `
+    <div class="page-header">
+      <button class="back" onclick="${backTarget}">←</button>
+      <span class="title">操作履歴</span>
+      <span style="width:30px;"></span>
+    </div>
+    <div style="padding:0 20px 4px;">
+      <h2 class="serif" style="font-size:24px;margin-bottom:4px;">${filteredProduct ? escapeHtml(filteredProduct.name) : 'すべての履歴'}</h2>
+      <div style="font-size:11px;color:var(--text-4);margin-bottom:10px;">
+        ${logs.length}件 ${rangeLabel}
+      </div>
+    </div>
+    <div class="history-filter-bar">
+      <button class="cat-tab ${filterRange === 'all' ? 'active' : ''}" onclick="setHistoryRange('all')"><span>全期間</span></button>
+      <button class="cat-tab ${filterRange === '30d' ? 'active' : ''}" onclick="setHistoryRange('30d')"><span>30日</span></button>
+      <button class="cat-tab ${filterRange === '7d' ? 'active' : ''}" onclick="setHistoryRange('7d')"><span>7日</span></button>
+      ${filterRight}
+    </div>
+    ${body}
+    ${renderBottomNav('settings')}
+  `;
+}
+
+function setHistoryRange(range) {
+  state.ui.historyRange = range;
+  saveState();
+  render();
+}
+
+function renderHistoryCard(log) {
+  const product = state.products.find(p => p.id === log.productId);
+  const productName = product ? product.name : '(削除済み商品)';
+  const subUnit = product ? (product.hasNested ? product.subUnit : product.unit) : '';
+  const mainUnit = product ? product.unit : '';
+
+  let icon = '📝';
+  let iconClass = 'adjust';
+  let changeText = '';
+
+  if (log.operation === 'consume_sub') {
+    icon = '−';
+    iconClass = 'consume';
+    changeText = '−1' + subUnit + ' 消費';
+  } else if (log.operation === 'refill_unit') {
+    icon = '+';
+    iconClass = 'refill';
+    changeText = '+' + Math.abs(log.deltaUnit) + mainUnit + ' 補充';
+  } else if (log.operation === 'open_unit') {
+    icon = '📦';
+    iconClass = 'open';
+    changeText = mainUnit + 'を開封 (' + (product ? product.subUnitsPerUnit : '?') + subUnit + 'に)';
+  } else if (log.operation === 'adjust') {
+    icon = '✏️';
+    iconClass = 'adjust';
+    if (log.deltaUnit !== 0 && log.deltaSub !== 0) {
+      changeText = '残量を調整 (' + log.deltaUnit + mainUnit + ' / ' + log.deltaSub + subUnit + ')';
+    } else if (log.deltaSub !== 0) {
+      changeText = (log.deltaSub > 0 ? '+' : '') + log.deltaSub + subUnit + ' 調整';
+    } else {
+      changeText = (log.deltaUnit > 0 ? '+' : '') + log.deltaUnit + mainUnit + ' 調整';
+    }
+  }
+
+  const time = new Date(log.createdAt);
+  const timeStr = String(time.getHours()).padStart(2, '0') + ':' + String(time.getMinutes()).padStart(2, '0');
+  const onClickAttr = product ? "navigate('detail',{productId:'" + product.id + "'})" : '';
+
+  return `
+    <button class="history-card" onclick="${onClickAttr}" style="${product ? 'cursor:pointer;' : 'cursor:default;'}">
+      <div class="icon-wrap ${iconClass}">${icon}</div>
+      <div class="body">
+        <div class="row1">
+          <div class="prod-name">${escapeHtml(productName)}</div>
+          <div class="time">${timeStr}</div>
+        </div>
+        <div class="change-text">${escapeHtml(changeText)}</div>
+        ${log.note ? `<div class="note">📝 ${escapeHtml(log.note)}</div>` : ''}
+      </div>
+    </button>
+  `;
+}
+
+// =============================================================
+// === Bottom Nav ===
+// =============================================================
+
+function renderBottomNav(active) {
+  const unread = getUnreadNotifCount();
+  const shopCount = getActiveShoppingCount();
+  return `
+    <nav class="bottom-nav">
+      <button class="nav-btn ${active === 'home' ? 'active' : ''}" onclick="navigate('home')">
+        <span class="icon" style="font-size:20px;">🏠</span>
+        <span class="label">在庫</span>
+      </button>
+      <button class="nav-btn ${active === 'cart' ? 'active' : ''}" onclick="navigate('shopping')">
+        <span class="icon" style="font-size:20px;position:relative;">🛒${shopCount > 0 ? '<span style="position:absolute;top:-4px;right:-8px;background:var(--danger);color:white;font-size:9px;min-width:14px;height:14px;border-radius:7px;padding:0 3px;display:inline-flex;align-items:center;justify-content:center;">' + shopCount + '</span>' : ''}</span>
+        <span class="label">買い物</span>
+      </button>
+      <button class="nav-btn center" onclick="navigate('add')">
+        <span class="icon-wrap"><span style="color:white;font-size:24px;font-weight:700;">+</span></span>
+        <span class="label" style="margin-top:2px;">追加</span>
+      </button>
+      <button class="nav-btn ${active === 'bell' ? 'active' : ''}" onclick="navigate('notifications')">
+        <span class="icon" style="font-size:20px;position:relative;">🔔${unread > 0 ? '<span style="position:absolute;top:-4px;right:-8px;background:var(--danger);color:white;font-size:9px;min-width:14px;height:14px;border-radius:7px;padding:0 3px;display:inline-flex;align-items:center;justify-content:center;">' + unread + '</span>' : ''}</span>
+        <span class="label">通知</span>
+      </button>
+      <button class="nav-btn ${active === 'settings' ? 'active' : ''}" onclick="navigate('settings')">
+        <span class="icon" style="font-size:20px;">⚙️</span>
+        <span class="label">設定</span>
+      </button>
+    </nav>
+  `;
+}
+
+// =============================================================
+// === Main render ===
+// =============================================================
+
+function render() {
+  const app = document.getElementById('app');
+  let html = '';
+  switch (state.ui.currentScreen) {
+    case 'onboarding': html = renderOnboarding(); break;
+    case 'home': html = renderHome(); break;
+    case 'detail': html = renderDetail(); break;
+    case 'add': html = renderAdd(); break;
+    case 'shopping': html = renderShopping(); break;
+    case 'notifications': html = renderNotifications(); break;
+    case 'settings': html = renderSettings(); break;
+    case 'categories': html = renderCategories(); break;
+    case 'history': html = renderHistory(); break;
+    default: html = renderHome();
+  }
+  app.innerHTML = html;
+  if (state.ui.currentScreen === 'onboarding') {
+    attachOnboardingHandlers();
+  }
+}
+
+// === Sample data for first-time users (optional) ===
+function loadSampleData() {
+  if (!confirm('サンプル商品(5件)を追加しますか?\n動作確認用のデータです。後で削除できます。')) return;
+  const samples = [
+    { name: 'シーバ デュオ シーフード', categoryId: 'cat_pet', hasNested: true, unit: 'ケース', subUnit: '箱', subUnitsPerUnit: 12, maxTotal: 24, alertThreshold: 4, notes: '200g × 12箱入り\n定期おトク便で月1配送', sealed: 0, opened: 8, expiry: '2027-04-21' },
+    { name: 'ピュリナ ワン サーモン&ツナ', categoryId: 'cat_pet', hasNested: true, unit: '箱', subUnit: '袋', subUnitsPerUnit: 10, maxTotal: 30, alertThreshold: 5, notes: '440g × 10袋\nしまう場所: パントリー上段', sealed: 0, opened: 1, expiry: '2027-02-15' },
+    { name: 'ムーニー パンツ M', categoryId: 'cat_baby', hasNested: false, unit: '袋', subUnit: null, subUnitsPerUnit: null, maxTotal: 6, alertThreshold: 2, notes: '68枚入り', sealed: 2, opened: 0, expiry: null },
+    { name: 'はいはい 粉ミルク', categoryId: 'cat_baby', hasNested: false, unit: '缶', subUnit: null, subUnitsPerUnit: null, maxTotal: 5, alertThreshold: 1, notes: '810g', sealed: 3, opened: 0, expiry: '2026-08-15' },
+    { name: 'エリエール 消臭+ 12R', categoryId: 'cat_daily', hasNested: true, unit: 'パック', subUnit: 'ロール', subUnitsPerUnit: 12, maxTotal: 96, alertThreshold: 12, notes: '1.5倍巻き', sealed: 5, opened: 0, expiry: null },
+  ];
+  samples.forEach(s => {
+    const id = uid('prod');
+    state.products.push({
+      id, name: s.name, categoryId: s.categoryId, janCode: null,
+      hasNested: s.hasNested, unit: s.unit, subUnit: s.subUnit,
+      subUnitsPerUnit: s.subUnitsPerUnit, maxTotal: s.maxTotal,
+      alertThreshold: s.alertThreshold, notes: s.notes,
+      pinned: false,
+      createdAt: new Date().toISOString(),
+    });
+    state.inventory[id] = {
+      sealedCount: s.sealed, openedSubCount: s.opened,
+      nearestExpiry: s.expiry, lastUpdatedAt: new Date().toISOString()
+    };
+    logStock(id, 'adjust', s.sealed, s.opened, 'manual', 'サンプルデータ');
+    checkAlerts(id);
+  });
+  saveState();
+  render();
+  showToast('サンプル商品を追加しました');
+}
+
+// === Initialize ===
+state = loadState() || createInitialState();
+render();
+
+// Add sample data prompt for empty new state
+if (state.user && state.products.length === 0) {
+  setTimeout(() => {
+    const homeContainer = document.getElementById('home-cards-container');
+    if (homeContainer && state.products.length === 0) {
+      const empty = homeContainer.querySelector('.empty');
+      if (empty && !empty.querySelector('.sample-btn')) {
+        const btn = document.createElement('button');
+        btn.className = 'btn-secondary sample-btn';
+        btn.textContent = '✨ サンプル商品を追加してみる';
+        btn.style.maxWidth = '280px';
+        btn.style.margin = '0 auto';
+        btn.onclick = loadSampleData;
+        empty.appendChild(btn);
+      }
+    }
+  }, 100);
+}
+</script>
+</body>
+</html>
