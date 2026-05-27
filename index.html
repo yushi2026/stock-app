@@ -1000,7 +1000,7 @@ async function refill(productId) {
   render();
 }
 
-function adjustOpenedSub(productId, delta) {
+async function adjustOpenedSub(productId, delta) {
   const product = state.products.find(p => p.id === productId);
   if (!product || !product.hasNested) return;
   const inv = state.inventory[productId] || (state.inventory[productId] = { sealedCount: 0, openedSubCount: 0, nearestExpiry: null });
@@ -1012,10 +1012,11 @@ function adjustOpenedSub(productId, delta) {
   if (delta < 0) checkAlerts(productId);
   if (delta > 0) removeFromShoppingListIfRecovered(productId);
   saveState();
+  await persistStockToCloud(productId, delta > 0 ? "adjust" : "consume_sub", 0, delta);
   render();
 }
 
-function adjustSealed(productId, delta) {
+async function adjustSealed(productId, delta) {
   const product = state.products.find(p => p.id === productId);
   if (!product) return;
   const inv = state.inventory[productId] || (state.inventory[productId] = { sealedCount: 0, openedSubCount: 0, nearestExpiry: null });
@@ -1027,10 +1028,11 @@ function adjustSealed(productId, delta) {
   if (delta > 0) removeFromShoppingListIfRecovered(productId);
   if (delta < 0) checkAlerts(productId);
   saveState();
+  await persistStockToCloud(productId, delta > 0 ? "refill_unit" : "adjust", delta, 0);
   render();
 }
 
-function openUnit(productId) {
+async function openUnit(productId) {
   const product = state.products.find(p => p.id === productId);
   if (!product || !product.hasNested) return;
   const inv = state.inventory[productId];
@@ -1043,6 +1045,7 @@ function openUnit(productId) {
   inv.lastUpdatedAt = new Date().toISOString();
   logStock(productId, 'open_unit', -1, product.subUnitsPerUnit);
   saveState();
+  await persistStockToCloud(productId, "open_unit", -1, product.subUnitsPerUnit);
   showToast(product.unit + 'を1つ開封しました');
   render();
 }
