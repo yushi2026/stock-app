@@ -1831,6 +1831,37 @@ function renderNotifItem(n) {
 // === Render: Settings ===
 // =============================================================
 
+
+async function fetchInviteCode() {
+  if (!supabase || !householdId) return null;
+  const { data, error } = await supabase.from('households').select('invite_code').eq('id', householdId).single();
+  if (error) return null;
+  return data && data.invite_code ? data.invite_code : null;
+}
+
+async function regenerateInviteCode() {
+  if (!supabase || !householdId) { showToast('Supabase未設定です'); return; }
+  const { data, error } = await supabase.rpc('regenerate_invite_code', { household_id: householdId });
+  if (error) { showToast(error.message || '再生成に失敗しました'); return; }
+  const nextCode = typeof data === 'string' ? data : (data && data.invite_code) || '';
+  if (nextCode) {
+    const el = document.getElementById('invite-code-value');
+    if (el) el.textContent = nextCode;
+  }
+  showToast('招待コードを再生成しました');
+}
+
+async function logoutSupabase() {
+  if (!supabase) { showToast('Supabase未設定です'); return; }
+  const { error } = await supabase.auth.signOut();
+  if (error) { showToast(error.message || 'ログアウト失敗'); return; }
+  authUser = null;
+  householdId = null;
+  state = createInitialState();
+  saveState();
+  navigate('auth');
+}
+
 function renderSettings() {
   const userName = state.user && state.user.name ? state.user.name : '';
   const userInitial = userName ? userName[0] : '?';
@@ -1846,7 +1877,7 @@ function renderSettings() {
         <span class="avatar avatar-lg" style="background:${userColor};">${escapeHtml(userInitial)}</span>
         <div style="flex:1;">
           <div style="font-size:14px;font-weight:700;">${escapeHtml(userName)}</div>
-          <div style="font-size:11px;color:var(--text-3);">Stage 1 (ローカル版・1人で使用中)</div>
+          <div style="font-size:11px;color:var(--text-3);">${USE_SUPABASE ? 'Stage 2 (家族共有モード)' : 'Stage 1 (ローカル版・1人で使用中)'}</div>
         </div>
         <button class="btn-text" onclick="openEditProfileModal()">編集</button>
       </div>
@@ -1901,6 +1932,30 @@ function renderSettings() {
           </button>
         </div>
       </div>
+
+
+      ${USE_SUPABASE ? `
+      <div class="settings-section">
+        <div class="section-title">家族共有</div>
+        <div class="settings-list">
+          <div class="settings-row">
+            <div class="icon-wrap">👨‍👩‍👧‍👦</div>
+            <div class="label">招待コード</div>
+            <div class="meta" id="invite-code-value">読み込み中...</div>
+          </div>
+          <button class="settings-row" onclick="regenerateInviteCode()">
+            <div class="icon-wrap">🔄</div>
+            <div class="label">招待コードを再生成</div>
+            <span class="muted">›</span>
+          </button>
+          <button class="settings-row" onclick="logoutSupabase()">
+            <div class="icon-wrap">🚪</div>
+            <div class="label">ログアウト</div>
+            <span class="muted">›</span>
+          </button>
+        </div>
+      </div>
+      ` : ''}
 
       <div class="settings-section">
         <div class="section-title">アプリ情報</div>
@@ -2392,6 +2447,12 @@ function render() {
   if (state.ui.currentScreen === 'onboarding' && !USE_SUPABASE) attachOnboardingHandlers();
   if (state.ui.currentScreen === 'auth' || (state.ui.currentScreen === 'onboarding' && USE_SUPABASE)) attachAuthHandlers('auth');
   if (state.ui.currentScreen === 'signup') attachAuthHandlers('signup');
+  if (state.ui.currentScreen === 'settings' && USE_SUPABASE) {
+    fetchInviteCode().then((code) => {
+      const el = document.getElementById('invite-code-value');
+      if (el) el.textContent = code || '未取得';
+    });
+  }
   if (state.ui.currentScreen === 'household-setup') {
     const c = document.getElementById('household-create-form');
     const j = document.getElementById('household-join-form');
