@@ -1577,7 +1577,22 @@ function renderLogItem(l, product) {
   `;
 }
 
-function confirmDeleteProduct(productId) {
+
+async function deleteProductFromCloud(productId) {
+  if (!USE_SUPABASE || !supabase || !householdId) return;
+  await supabase.from('shopping_list_items').delete().eq('household_id', householdId).eq('product_id', productId);
+  await supabase.from('notifications').delete().eq('household_id', householdId).eq('product_id', productId);
+  await supabase.from('stock_logs').delete().eq('household_id', householdId).eq('product_id', productId);
+  await supabase.from('inventory').delete().eq('household_id', householdId).eq('product_id', productId);
+  await supabase.from('products').delete().eq('household_id', householdId).eq('id', productId);
+}
+
+async function deleteCategoryFromCloud(categoryId) {
+  if (!USE_SUPABASE || !supabase || !householdId) return;
+  await supabase.from('categories').delete().eq('household_id', householdId).eq('id', categoryId);
+}
+
+async function confirmDeleteProduct(productId) {
   const product = state.products.find(p => p.id === productId);
   if (!product) return;
   if (confirm('「' + product.name + '」を削除しますか?\n在庫データ・履歴もすべて削除されます。')) {
@@ -1587,6 +1602,7 @@ function confirmDeleteProduct(productId) {
     state.shoppingList = state.shoppingList.filter(s => s.productId !== productId);
     state.notifications = state.notifications.filter(n => n.productId !== productId);
     saveState();
+    await deleteProductFromCloud(productId);
     showToast('削除しました');
     navigate('home');
   }
@@ -2339,13 +2355,14 @@ function renderCategoryModal(editing) {
   });
 }
 
-function confirmDeleteCategory(id) {
+async function confirmDeleteCategory(id) {
   const cat = state.categories.find(c => c.id === id);
   const count = state.products.filter(p => p.categoryId === id).length;
   if (count > 0) { showToast(count + '件の商品が紐付いているため削除できません'); return; }
   if (!confirm('カテゴリ「' + cat.name + '」を削除しますか?')) return;
   state.categories = state.categories.filter(c => c.id !== id);
   saveState();
+  await deleteCategoryFromCloud(id);
   closeModal();
   showToast('削除しました');
   render();
