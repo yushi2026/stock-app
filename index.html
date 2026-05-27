@@ -597,7 +597,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
 const STORAGE_KEY = 'stock_app_v1_state';
 const SUPABASE_URL = 'https://nimmnlncjupplnidrplk.supabase.co';
-const SUPABASE_ANON_KEY = '';
+const SUPABASE_ANON_KEY = (window.STOCK_CONFIG && window.STOCK_CONFIG.supabaseAnonKey) || '';
 const USE_SUPABASE = !!SUPABASE_ANON_KEY;
 let supabase = null;
 let authUser = null;
@@ -798,7 +798,19 @@ function renderAuth() {
   </div>`;
 }
 
-function renderSignup() { return renderAuth().replace('ログイン','新規登録').replace('ログイン','登録する').replace("navigate('signup')","navigate('auth')").replace('アカウント作成','ログインへ'); }
+function renderSignup() {
+  return `
+  <div class="onboarding">
+    <div><div class="brand-tag">Stock.</div><div class="brand-name">新規登録</div></div>
+    <div class="spacer"></div>
+    <form id="auth-form">
+      <div class="form-group"><label class="form-label">メール</label><input class="form-input" type="email" name="email" required></div>
+      <div class="form-group"><label class="form-label">パスワード</label><input class="form-input" type="password" name="password" required minlength="6"></div>
+      <button class="btn-primary" type="submit">登録する</button>
+      <button class="btn-secondary" type="button" onclick="navigate('auth')" style="margin-top:10px;">ログインへ</button>
+    </form>
+  </div>`;
+}
 function renderCheckEmail() { return '<div class="onboarding"><div class="brand-name">メール確認待ち</div><p class="muted" style="margin-top:12px;">確認メールのリンクを開いてからログインしてください。</p><button class="btn-primary" style="margin-top:16px;" onclick="navigate('auth')">ログインへ戻る</button></div>'; }
 
 function renderHouseholdSetup() { return `
@@ -1065,7 +1077,7 @@ function renderOnboarding() {
         <button type="submit" class="btn-primary">はじめる</button>
       </form>
       <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--text-4);">
-        Stage 2準備: Supabase連携対応（キー未設定時はローカル保存）
+        Stage 2準備: `window.STOCK_CONFIG.supabaseAnonKey` を設定すると認証が有効化されます
       </div>
     </div>
   `;
@@ -2383,8 +2395,23 @@ function render() {
   if (state.ui.currentScreen === 'household-setup') {
     const c = document.getElementById('household-create-form');
     const j = document.getElementById('household-join-form');
-    if (c) c.addEventListener('submit', async (e)=>{e.preventDefault(); const name=(new FormData(c)).get('name'); const {data,error}=await supabase.rpc('create_household',{name}); if(error){showToast(error.message);return;} householdId=data; await bootstrapAfterLogin();});
-    if (j) j.addEventListener('submit', async (e)=>{e.preventDefault(); const code=(new FormData(j)).get('code'); const {error}=await supabase.rpc('join_household_by_invite',{invite_code:code}); if(error){showToast(error.message);return;} await bootstrapAfterLogin();});
+    if (c) c.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      if (!supabase) { showToast('Supabaseキー未設定です'); return; }
+      const name=(new FormData(c)).get('name');
+      const {data,error}=await supabase.rpc('create_household',{name});
+      if(error){showToast(error.message);return;}
+      householdId=data;
+      await bootstrapAfterLogin();
+    });
+    if (j) j.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      if (!supabase) { showToast('Supabaseキー未設定です'); return; }
+      const code=(new FormData(j)).get('code');
+      const {error}=await supabase.rpc('join_household_by_invite',{invite_code:code});
+      if(error){showToast(error.message);return;}
+      await bootstrapAfterLogin();
+    });
   }
 }
 
