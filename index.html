@@ -894,6 +894,9 @@ function subscribeRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'products', filter: `household_id=eq.${householdId}` }, async () => { await loadCloudState(); render(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory', filter: `household_id=eq.${householdId}` }, async () => { await loadCloudState(); render(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_logs', filter: `household_id=eq.${householdId}` }, async () => { await loadCloudState(); render(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_list_items', filter: `household_id=eq.${householdId}` }, async () => { await loadCloudState(); render(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `household_id=eq.${householdId}` }, async () => { await loadCloudState(); render(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `household_id=eq.${householdId}` }, async () => { await loadCloudState(); render(); })
     .subscribe();
 }
 
