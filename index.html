@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg: #FAF7F2;
@@ -595,6 +596,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 // =============================================================
 
 const STORAGE_KEY = 'stock_app_v1_state';
+const SUPABASE_URL = 'https://nimmnlncjupplnidrplk.supabase.co';
+const SUPABASE_ANON_KEY = '';
+const USE_SUPABASE = !!SUPABASE_ANON_KEY;
+let supabase = null;
+let authUser = null;
+let householdId = null;
 
 const CATEGORY_ICONS = {
   'pet': '🐱', 'baby': '👶', 'daily': '✨',
@@ -742,6 +749,77 @@ function closeModal() {
 document.getElementById('modal').addEventListener('click', (e) => {
   if (e.target.id === 'modal') closeModal();
 });
+
+
+function initSupabase() {
+  if (!USE_SUPABASE || !window.supabase) return;
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+async function handleSignup(email, password) {
+  const { error } = await supabase.auth.signUp({ email, password });
+  if (error) throw error;
+  showToast('確認メールを送信しました');
+  navigate('auth-check-email');
+}
+
+async function handleLogin(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  authUser = data.user;
+  await bootstrapAfterLogin();
+}
+
+async function bootstrapAfterLogin() {
+  if (!supabase || !authUser) return;
+  const { data: memberships } = await supabase.from('household_members').select('household_id').eq('user_id', authUser.id).limit(1);
+  householdId = memberships && memberships[0] ? memberships[0].household_id : null;
+  if (!householdId) {
+    navigate('household-setup');
+    return;
+  }
+  state.user = state.user || { name: authUser.email.split('@')[0], avatarColor: '#D4763A', createdAt: new Date().toISOString() };
+  state.ui.currentScreen = 'home';
+  saveState();
+  render();
+}
+
+function renderAuth() {
+  return `
+  <div class="onboarding">
+    <div><div class="brand-tag">Stock.</div><div class="brand-name">ログイン</div></div>
+    <div class="spacer"></div>
+    <form id="auth-form">
+      <div class="form-group"><label class="form-label">メール</label><input class="form-input" type="email" name="email" required></div>
+      <div class="form-group"><label class="form-label">パスワード</label><input class="form-input" type="password" name="password" required minlength="6"></div>
+      <button class="btn-primary" type="submit">ログイン</button>
+      <button class="btn-secondary" type="button" onclick="navigate('signup')" style="margin-top:10px;">アカウント作成</button>
+    </form>
+  </div>`;
+}
+
+function renderSignup() { return renderAuth().replace('ログイン','新規登録').replace('ログイン','登録する').replace("navigate('signup')","navigate('auth')").replace('アカウント作成','ログインへ'); }
+function renderCheckEmail() { return '<div class="onboarding"><div class="brand-name">メール確認待ち</div><p class="muted" style="margin-top:12px;">確認メールのリンクを開いてからログインしてください。</p><button class="btn-primary" style="margin-top:16px;" onclick="navigate('auth')">ログインへ戻る</button></div>'; }
+
+function renderHouseholdSetup() { return `
+<div class="onboarding"><div class="brand-name">世帯セットアップ</div><p class="muted" style="margin:10px 0 20px;">新規作成または招待コードで参加</p>
+<form id="household-create-form" style="margin-bottom:10px;"><div class="form-group"><input class="form-input" name="name" placeholder="世帯名 (例: 田中家)" required></div><button class="btn-primary" type="submit">世帯を作成</button></form>
+<form id="household-join-form"><div class="form-group"><input class="form-input" name="code" placeholder="招待コード" required></div><button class="btn-secondary" type="submit">招待コードで参加</button></form></div>`;
+}
+
+function attachAuthHandlers(screen) {
+  const form = document.getElementById('auth-form');
+  if (!form) return;
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!supabase) { showToast('Supabaseキー未設定です'); return; }
+    const fd = new FormData(form);
+    try {
+      if (screen === 'signup') await handleSignup(fd.get('email'), fd.get('password'));
+      else await handleLogin(fd.get('email'), fd.get('password'));
+    } catch (err) { showToast(err.message || '認証エラー'); }
+  });
+}
 
 // =============================================================
 // === Stock operations ===
@@ -987,7 +1065,7 @@ function renderOnboarding() {
         <button type="submit" class="btn-primary">はじめる</button>
       </form>
       <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--text-4);">
-        Stage 1 (個人ローカル版) · データはこのブラウザに保存されます
+        Stage 2準備: Supabase連携対応（キー未設定時はローカル保存）
       </div>
     </div>
   `;
@@ -2283,7 +2361,11 @@ function render() {
   const app = document.getElementById('app');
   let html = '';
   switch (state.ui.currentScreen) {
-    case 'onboarding': html = renderOnboarding(); break;
+    case 'onboarding': html = USE_SUPABASE ? renderAuth() : renderOnboarding(); break;
+    case 'auth': html = renderAuth(); break;
+    case 'signup': html = renderSignup(); break;
+    case 'auth-check-email': html = renderCheckEmail(); break;
+    case 'household-setup': html = renderHouseholdSetup(); break;
     case 'home': html = renderHome(); break;
     case 'detail': html = renderDetail(); break;
     case 'add': html = renderAdd(); break;
@@ -2295,8 +2377,14 @@ function render() {
     default: html = renderHome();
   }
   app.innerHTML = html;
-  if (state.ui.currentScreen === 'onboarding') {
-    attachOnboardingHandlers();
+  if (state.ui.currentScreen === 'onboarding' && !USE_SUPABASE) attachOnboardingHandlers();
+  if (state.ui.currentScreen === 'auth' || (state.ui.currentScreen === 'onboarding' && USE_SUPABASE)) attachAuthHandlers('auth');
+  if (state.ui.currentScreen === 'signup') attachAuthHandlers('signup');
+  if (state.ui.currentScreen === 'household-setup') {
+    const c = document.getElementById('household-create-form');
+    const j = document.getElementById('household-join-form');
+    if (c) c.addEventListener('submit', async (e)=>{e.preventDefault(); const name=(new FormData(c)).get('name'); const {data,error}=await supabase.rpc('create_household',{name}); if(error){showToast(error.message);return;} householdId=data; await bootstrapAfterLogin();});
+    if (j) j.addEventListener('submit', async (e)=>{e.preventDefault(); const code=(new FormData(j)).get('code'); const {error}=await supabase.rpc('join_household_by_invite',{invite_code:code}); if(error){showToast(error.message);return;} await bootstrapAfterLogin();});
   }
 }
 
@@ -2333,8 +2421,11 @@ function loadSampleData() {
 }
 
 // === Initialize ===
+initSupabase();
 state = loadState() || createInitialState();
+if (USE_SUPABASE) { state.ui.currentScreen = 'onboarding'; }
 render();
+if (USE_SUPABASE && supabase) { supabase.auth.getUser().then(({data})=>{ authUser=data.user; if (authUser) bootstrapAfterLogin(); }); }
 
 // Add sample data prompt for empty new state
 if (state.user && state.products.length === 0) {
