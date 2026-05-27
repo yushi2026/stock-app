@@ -1641,6 +1641,49 @@ function renderAdd() {
 // === Add/Edit Product Modal ===
 // =============================================================
 
+
+async function upsertProductToCloud(product, inventoryRow, isNew) {
+  if (!USE_SUPABASE || !supabase || !householdId) return;
+  await supabase.from('products').upsert({
+    id: product.id,
+    household_id: householdId,
+    category_id: product.categoryId,
+    name: product.name,
+    jan_code: product.janCode,
+    has_nested: product.hasNested,
+    unit: product.unit,
+    sub_unit: product.subUnit,
+    sub_units_per_unit: product.subUnitsPerUnit,
+    max_total: product.maxTotal,
+    alert_threshold: product.alertThreshold,
+    notes: product.notes,
+    pinned: product.pinned,
+    created_at: product.createdAt,
+  });
+  await supabase.from('inventory').upsert({
+    household_id: householdId,
+    product_id: product.id,
+    sealed_count: inventoryRow.sealedCount,
+    opened_sub_count: inventoryRow.openedSubCount,
+    nearest_expiry: inventoryRow.nearestExpiry,
+    updated_at: inventoryRow.lastUpdatedAt,
+  }, { onConflict: 'product_id' });
+  if (isNew) {
+    await supabase.from('stock_logs').insert({
+      household_id: householdId,
+      product_id: product.id,
+      operation: 'adjust',
+      delta_unit: inventoryRow.sealedCount,
+      delta_sub: inventoryRow.openedSubCount,
+      sealed_after: inventoryRow.sealedCount,
+      opened_sub_after: inventoryRow.openedSubCount,
+      source: 'manual',
+      note: '初期登録',
+      created_at: new Date().toISOString(),
+    });
+  }
+}
+
 function openAddProductModal(productId) {
   productId = productId || null;
   const editing = productId ? state.products.find(p => p.id === productId) : null;
@@ -1774,7 +1817,7 @@ function openAddProductModal(productId) {
     });
   });
 
-  document.getElementById('product-form').addEventListener('submit', (e) => {
+  document.getElementById('product-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
     const isNested = fd.get('hasNested') === 'true';
@@ -1824,6 +1867,7 @@ function openAddProductModal(productId) {
       logStock(pid, 'adjust', sealedCount, openedSubCount, 'manual', '初期登録');
     }
     saveState();
+    await upsertProductToCloud(product, state.inventory[pid], !isEdit);
     closeModal();
     showToast(isEdit ? '更新しました' : '追加しました');
     if (isEdit) render();
