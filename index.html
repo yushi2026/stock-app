@@ -920,7 +920,34 @@ function logStock(productId, op, deltaUnit, deltaSub, source, note) {
   if (state.stockLogs.length > 500) state.stockLogs = state.stockLogs.slice(0, 500);
 }
 
-function consume(productId) {
+
+async function persistStockToCloud(productId, operation, deltaUnit, deltaSub, note) {
+  if (!USE_SUPABASE || !supabase || !householdId) return;
+  const inv = getInventory(productId);
+  const now = new Date().toISOString();
+  await supabase.from('inventory').upsert({
+    household_id: householdId,
+    product_id: productId,
+    sealed_count: inv.sealedCount,
+    opened_sub_count: inv.openedSubCount,
+    nearest_expiry: inv.nearestExpiry,
+    updated_at: now,
+  }, { onConflict: 'product_id' });
+  await supabase.from('stock_logs').insert({
+    household_id: householdId,
+    product_id: productId,
+    operation,
+    delta_unit: deltaUnit,
+    delta_sub: deltaSub,
+    sealed_after: inv.sealedCount,
+    opened_sub_after: inv.openedSubCount,
+    source: 'manual',
+    note: note || '',
+    created_at: now,
+  });
+}
+
+async function consume(productId) {
   const product = state.products.find(p => p.id === productId);
   if (!product) return;
   let inv = state.inventory[productId];
@@ -953,10 +980,11 @@ function consume(productId) {
   }
   checkAlerts(productId);
   saveState();
+  await persistStockToCloud(productId, "consume_sub", 0, -1);
   render();
 }
 
-function refill(productId) {
+async function refill(productId) {
   const product = state.products.find(p => p.id === productId);
   if (!product) return;
   let inv = state.inventory[productId];
@@ -967,6 +995,7 @@ function refill(productId) {
   logStock(productId, 'refill_unit', 1, 0);
   removeFromShoppingListIfRecovered(productId);
   saveState();
+  await persistStockToCloud(productId, "refill_unit", 1, 0);
   showToast(product.hasNested ? '+1' + product.unit + ' (' + product.subUnitsPerUnit + product.subUnit + '分)' : '+1' + product.unit);
   render();
 }
