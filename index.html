@@ -1225,7 +1225,7 @@ function attachOnboardingHandlers() {
       });
     }
   });
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
     state.user = {
@@ -2208,7 +2208,7 @@ function openEditProfileModal() {
       });
     }
   });
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
     state.user.name = fd.get('name').trim();
@@ -2297,6 +2297,18 @@ function renderCategories() {
   `;
 }
 
+
+async function upsertCategoryToCloud(category) {
+  if (!USE_SUPABASE || !supabase || !householdId) return;
+  await supabase.from('categories').upsert({
+    id: category.id,
+    household_id: householdId,
+    name: category.name,
+    icon: category.icon,
+    sort_order: category.sortOrder,
+  });
+}
+
 function openAddCategoryModal() {
   renderCategoryModal(null);
 }
@@ -2346,13 +2358,17 @@ function renderCategoryModal(editing) {
     const name = fd.get('name').trim();
     const icon = fd.get('icon') || 'other';
     if (!name) { showToast('名前を入力してください'); return; }
+    let categoryPayload;
     if (editing) {
       const idx = state.categories.findIndex(c => c.id === id);
       state.categories[idx] = Object.assign({}, editing, { name, icon });
+      categoryPayload = state.categories[idx];
     } else {
-      state.categories.push({ id, name, icon, sortOrder: state.categories.length + 1 });
+      categoryPayload = { id, name, icon, sortOrder: state.categories.length + 1 };
+      state.categories.push(categoryPayload);
     }
     saveState();
+    await upsertCategoryToCloud(categoryPayload);
     closeModal();
     showToast(editing ? '更新しました' : '追加しました');
     render();
