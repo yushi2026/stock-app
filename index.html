@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="うちのストック">
 <meta name="theme-color" content="#FAF7F2">
+<link rel="manifest" href="/manifest.json">
 <title>うちのストック</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2723,6 +2724,12 @@ if (state.user && state.products.length === 0) {
       }
     }
   }, 100);
+}
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
 }
 </script>
 </body>
