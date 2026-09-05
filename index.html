@@ -7,10 +7,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="うちのストック">
 <meta name="theme-color" content="#FAF7F2">
+<link rel="manifest" href="/manifest.json">
 <title>うちのストック</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg: #FAF7F2;
@@ -595,6 +597,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 // =============================================================
 
 const STORAGE_KEY = 'stock_app_v1_state';
+const SUPABASE_URL = 'https://nimmnlncjupplnidrplk.supabase.co';
+const SUPABASE_ANON_KEY = (window.STOCK_CONFIG && window.STOCK_CONFIG.supabaseAnonKey) || '';
+const USE_SUPABASE = !!SUPABASE_ANON_KEY;
+let supabase = null;
+let authUser = null;
+let householdId = null;
 
 const CATEGORY_ICONS = {
   'pet': '🐱', 'baby': '👶', 'daily': '✨',
@@ -638,6 +646,7 @@ function createInitialState() {
 }
 
 function loadState() {
+  if (USE_SUPABASE) return createInitialState();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
@@ -652,6 +661,7 @@ function loadState() {
 }
 
 function saveState() {
+  if (USE_SUPABASE) return;
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
   catch (e) { console.error('Save failed', e); }
 }
@@ -743,6 +753,155 @@ document.getElementById('modal').addEventListener('click', (e) => {
   if (e.target.id === 'modal') closeModal();
 });
 
+
+function initSupabase() {
+  if (!USE_SUPABASE || !window.supabase) return;
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+async function handleSignup(email, password) {
+  const { error } = await supabase.auth.signUp({ email, password });
+  if (error) throw error;
+  showToast('確認メールを送信しました');
+  navigate('auth-check-email');
+}
+
+async function handleLogin(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  authUser = data.user;
+  await bootstrapAfterLogin();
+}
+
+async function bootstrapAfterLogin() {
+  if (!supabase || !authUser) return;
+  const { data: memberships } = await supabase.from('household_members').select('household_id').eq('user_id', authUser.id).limit(1);
+  householdId = memberships && memberships[0] ? memberships[0].household_id : null;
+  if (!householdId) {
+    navigate('household-setup');
+    return;
+  }
+  state.user = state.user || { name: authUser.email.split('@')[0], avatarColor: '#D4763A', createdAt: new Date().toISOString() };
+  await loadCloudState();
+  subscribeRealtime();
+  state.ui.currentScreen = 'home';
+  render();
+}
+
+function renderAuth() {
+  return `
+  <div class="onboarding">
+    <div><div class="brand-tag">Stock.</div><div class="brand-name">ログイン</div></div>
+    <div class="spacer"></div>
+    <form id="auth-form">
+      <div class="form-group"><label class="form-label">メール</label><input class="form-input" type="email" name="email" required></div>
+      <div class="form-group"><label class="form-label">パスワード</label><input class="form-input" type="password" name="password" required minlength="6"></div>
+      <button class="btn-primary" type="submit">ログイン</button>
+      <button class="btn-secondary" type="button" onclick="navigate('signup')" style="margin-top:10px;">アカウント作成</button>
+    </form>
+  </div>`;
+}
+
+function renderSignup() {
+  return `
+  <div class="onboarding">
+    <div><div class="brand-tag">Stock.</div><div class="brand-name">新規登録</div></div>
+    <div class="spacer"></div>
+    <form id="auth-form">
+      <div class="form-group"><label class="form-label">メール</label><input class="form-input" type="email" name="email" required></div>
+      <div class="form-group"><label class="form-label">パスワード</label><input class="form-input" type="password" name="password" required minlength="6"></div>
+      <button class="btn-primary" type="submit">登録する</button>
+      <button class="btn-secondary" type="button" onclick="navigate('auth')" style="margin-top:10px;">ログインへ</button>
+    </form>
+  </div>`;
+}
+function renderCheckEmail() { return '<div class="onboarding"><div class="brand-name">メール確認待ち</div><p class="muted" style="margin-top:12px;">確認メールのリンクを開いてからログインしてください。</p><button class="btn-primary" style="margin-top:16px;" onclick="navigate('auth')">ログインへ戻る</button></div>'; }
+
+function renderHouseholdSetup() { return `
+<div class="onboarding"><div class="brand-name">世帯セットアップ</div><p class="muted" style="margin:10px 0 20px;">新規作成または招待コードで参加</p>
+<form id="household-create-form" style="margin-bottom:10px;"><div class="form-group"><input class="form-input" name="name" placeholder="世帯名 (例: 田中家)" required></div><button class="btn-primary" type="submit">世帯を作成</button></form>
+<form id="household-join-form"><div class="form-group"><input class="form-input" name="code" placeholder="招待コード" required></div><button class="btn-secondary" type="submit">招待コードで参加</button></form></div>`;
+}
+
+function attachAuthHandlers(screen) {
+  const form = document.getElementById('auth-form');
+  if (!form) return;
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!supabase) { showToast('Supabaseキー未設定です'); return; }
+    const fd = new FormData(form);
+    try {
+      if (screen === 'signup') await handleSignup(fd.get('email'), fd.get('password'));
+      else await handleLogin(fd.get('email'), fd.get('password'));
+    } catch (err) { showToast(err.message || '認証エラー'); }
+  });
+}
+
+
+
+async function loadCloudState() {
+  if (!supabase || !householdId) return;
+  const [catsR, productsR, inventoryR, logsR, shopR, notifR] = await Promise.all([
+    supabase.from('categories').select('*').eq('household_id', householdId).order('sort_order', { ascending: true }),
+    supabase.from('products').select('*').eq('household_id', householdId).order('created_at', { ascending: false }),
+    supabase.from('inventory').select('*').eq('household_id', householdId),
+    supabase.from('stock_logs').select('*').eq('household_id', householdId).order('created_at', { ascending: false }).limit(500),
+    supabase.from('shopping_list_items').select('*').eq('household_id', householdId).order('created_at', { ascending: false }),
+    supabase.from('notifications').select('*').eq('household_id', householdId).order('created_at', { ascending: false }).limit(100),
+  ]);
+
+  if (!catsR.error && catsR.data && catsR.data.length) {
+    state.categories = catsR.data.map(c => ({ id: c.id, name: c.name, icon: c.icon || 'other', sortOrder: c.sort_order || 0 }));
+  }
+  if (!productsR.error && productsR.data) {
+    state.products = productsR.data.map(p => ({
+      id: p.id, name: p.name, categoryId: p.category_id, janCode: p.jan_code || null,
+      hasNested: !!p.has_nested, unit: p.unit, subUnit: p.sub_unit || null, subUnitsPerUnit: p.sub_units_per_unit || null,
+      maxTotal: p.max_total || 0, alertThreshold: p.alert_threshold || state.settings.alertThresholdDefault,
+      notes: p.notes || '', pinned: !!p.pinned, createdAt: p.created_at || new Date().toISOString(),
+    }));
+  }
+  if (!inventoryR.error && inventoryR.data) {
+    state.inventory = {};
+    inventoryR.data.forEach(i => state.inventory[i.product_id] = {
+      sealedCount: i.sealed_count || 0, openedSubCount: i.opened_sub_count || 0,
+      nearestExpiry: i.nearest_expiry || null, lastUpdatedAt: i.updated_at || new Date().toISOString(),
+    });
+  }
+  if (!logsR.error && logsR.data) {
+    state.stockLogs = logsR.data.map(l => ({
+      id: l.id, productId: l.product_id, operation: l.operation, deltaUnit: l.delta_unit || 0, deltaSub: l.delta_sub || 0,
+      sealedAfter: l.sealed_after || 0, openedSubAfter: l.opened_sub_after || 0, source: l.source || 'manual',
+      note: l.note || '', createdAt: l.created_at,
+    }));
+  }
+  if (!shopR.error && shopR.data) {
+    state.shoppingList = shopR.data.map(i => ({
+      id: i.id, productId: i.product_id, quantityNeeded: i.quantity_needed || 1, isUrgent: !!i.is_urgent,
+      isPurchased: !!i.is_purchased, autoGenerated: !!i.auto_generated, createdAt: i.created_at, purchasedAt: i.purchased_at,
+    }));
+  }
+  if (!notifR.error && notifR.data) {
+    state.notifications = notifR.data.map(n => ({
+      id: n.id, type: n.type, productId: n.product_id, title: n.title, body: n.body, isRead: !!n.is_read, createdAt: n.created_at,
+    }));
+  }
+}
+
+let householdSubscription = null;
+function subscribeRealtime() {
+  if (!supabase || !householdId) return;
+  if (householdSubscription) supabase.removeChannel(householdSubscription);
+  householdSubscription = supabase.channel('household-sync-' + householdId)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'products', filter: `household_id=eq.${householdId}` }, async () => { await loadCloudState(); render(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory', filter: `household_id=eq.${householdId}` }, async () => { await loadCloudState(); render(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_logs', filter: `household_id=eq.${householdId}` }, async () => { await loadCloudState(); render(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_list_items', filter: `household_id=eq.${householdId}` }, async () => { await loadCloudState(); render(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `household_id=eq.${householdId}` }, async () => { await loadCloudState(); render(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `household_id=eq.${householdId}` }, async () => { await loadCloudState(); render(); })
+    .subscribe();
+}
+
 // =============================================================
 // === Stock operations ===
 // =============================================================
@@ -766,7 +925,34 @@ function logStock(productId, op, deltaUnit, deltaSub, source, note) {
   if (state.stockLogs.length > 500) state.stockLogs = state.stockLogs.slice(0, 500);
 }
 
-function consume(productId) {
+
+async function persistStockToCloud(productId, operation, deltaUnit, deltaSub, note) {
+  if (!USE_SUPABASE || !supabase || !householdId) return;
+  const inv = getInventory(productId);
+  const now = new Date().toISOString();
+  await supabase.from('inventory').upsert({
+    household_id: householdId,
+    product_id: productId,
+    sealed_count: inv.sealedCount,
+    opened_sub_count: inv.openedSubCount,
+    nearest_expiry: inv.nearestExpiry,
+    updated_at: now,
+  }, { onConflict: 'product_id' });
+  await supabase.from('stock_logs').insert({
+    household_id: householdId,
+    product_id: productId,
+    operation,
+    delta_unit: deltaUnit,
+    delta_sub: deltaSub,
+    sealed_after: inv.sealedCount,
+    opened_sub_after: inv.openedSubCount,
+    source: 'manual',
+    note: note || '',
+    created_at: now,
+  });
+}
+
+async function consume(productId) {
   const product = state.products.find(p => p.id === productId);
   if (!product) return;
   let inv = state.inventory[productId];
@@ -799,10 +985,11 @@ function consume(productId) {
   }
   checkAlerts(productId);
   saveState();
+  await persistStockToCloud(productId, "consume_sub", 0, -1);
   render();
 }
 
-function refill(productId) {
+async function refill(productId) {
   const product = state.products.find(p => p.id === productId);
   if (!product) return;
   let inv = state.inventory[productId];
@@ -813,11 +1000,12 @@ function refill(productId) {
   logStock(productId, 'refill_unit', 1, 0);
   removeFromShoppingListIfRecovered(productId);
   saveState();
+  await persistStockToCloud(productId, "refill_unit", 1, 0);
   showToast(product.hasNested ? '+1' + product.unit + ' (' + product.subUnitsPerUnit + product.subUnit + '分)' : '+1' + product.unit);
   render();
 }
 
-function adjustOpenedSub(productId, delta) {
+async function adjustOpenedSub(productId, delta) {
   const product = state.products.find(p => p.id === productId);
   if (!product || !product.hasNested) return;
   const inv = state.inventory[productId] || (state.inventory[productId] = { sealedCount: 0, openedSubCount: 0, nearestExpiry: null });
@@ -829,10 +1017,11 @@ function adjustOpenedSub(productId, delta) {
   if (delta < 0) checkAlerts(productId);
   if (delta > 0) removeFromShoppingListIfRecovered(productId);
   saveState();
+  await persistStockToCloud(productId, delta > 0 ? "adjust" : "consume_sub", 0, delta);
   render();
 }
 
-function adjustSealed(productId, delta) {
+async function adjustSealed(productId, delta) {
   const product = state.products.find(p => p.id === productId);
   if (!product) return;
   const inv = state.inventory[productId] || (state.inventory[productId] = { sealedCount: 0, openedSubCount: 0, nearestExpiry: null });
@@ -844,10 +1033,11 @@ function adjustSealed(productId, delta) {
   if (delta > 0) removeFromShoppingListIfRecovered(productId);
   if (delta < 0) checkAlerts(productId);
   saveState();
+  await persistStockToCloud(productId, delta > 0 ? "refill_unit" : "adjust", delta, 0);
   render();
 }
 
-function openUnit(productId) {
+async function openUnit(productId) {
   const product = state.products.find(p => p.id === productId);
   if (!product || !product.hasNested) return;
   const inv = state.inventory[productId];
@@ -860,6 +1050,7 @@ function openUnit(productId) {
   inv.lastUpdatedAt = new Date().toISOString();
   logStock(productId, 'open_unit', -1, product.subUnitsPerUnit);
   saveState();
+  await persistStockToCloud(productId, "open_unit", -1, product.subUnitsPerUnit);
   showToast(product.unit + 'を1つ開封しました');
   render();
 }
@@ -880,6 +1071,36 @@ function checkAlerts(productId) {
   }
 }
 
+
+function syncNotificationToCloud(notification) {
+  if (!USE_SUPABASE || !supabase || !householdId) return;
+  supabase.from('notifications').upsert({
+    id: notification.id,
+    household_id: householdId,
+    type: notification.type,
+    product_id: notification.productId,
+    title: notification.title,
+    body: notification.body,
+    is_read: notification.isRead,
+    created_at: notification.createdAt,
+  });
+}
+
+function syncShoppingItemToCloud(item) {
+  if (!USE_SUPABASE || !supabase || !householdId) return;
+  supabase.from('shopping_list_items').upsert({
+    id: item.id,
+    household_id: householdId,
+    product_id: item.productId,
+    quantity_needed: item.quantityNeeded,
+    is_urgent: item.isUrgent,
+    is_purchased: item.isPurchased,
+    auto_generated: item.autoGenerated,
+    created_at: item.createdAt,
+    purchased_at: item.purchasedAt,
+  });
+}
+
 function addNotification(type, productId, title, body, urgency) {
   urgency = urgency || 'normal';
   const sixHoursAgo = Date.now() - 6 * 3600 * 1000;
@@ -887,12 +1108,14 @@ function addNotification(type, productId, title, body, urgency) {
     n.productId === productId && n.type === type && new Date(n.createdAt).getTime() > sixHoursAgo
   );
   if (dup) return;
-  state.notifications.unshift({
+  const notification = {
     id: uid('notif'),
     type, productId, title, body,
     isRead: false,
     createdAt: new Date().toISOString(),
-  });
+  };
+  state.notifications.unshift(notification);
+  syncNotificationToCloud(notification);
   if (state.notifications.length > 100) state.notifications = state.notifications.slice(0, 100);
 }
 
@@ -902,7 +1125,7 @@ function addToShoppingList(productId, urgent) {
     if (urgent && !existing.isUrgent) existing.isUrgent = true;
     return;
   }
-  state.shoppingList.push({
+  const item = {
     id: uid('shop'),
     productId,
     quantityNeeded: 1,
@@ -925,24 +1148,55 @@ function removeFromShoppingListIfRecovered(productId) {
   }
 }
 
-function toggleShoppingItem(itemId) {
+
+async function persistShoppingItemToCloud(item) {
+  if (!USE_SUPABASE || !supabase || !householdId) return;
+  await supabase.from('shopping_list_items').upsert({
+    id: item.id,
+    household_id: householdId,
+    product_id: item.productId,
+    quantity_needed: item.quantityNeeded,
+    is_urgent: item.isUrgent,
+    is_purchased: item.isPurchased,
+    auto_generated: item.autoGenerated,
+    created_at: item.createdAt,
+    purchased_at: item.purchasedAt,
+  });
+}
+
+async function deletePurchasedShoppingItemsFromCloud(ids) {
+  if (!USE_SUPABASE || !supabase || !householdId || !ids.length) return;
+  await supabase.from('shopping_list_items').delete().in('id', ids).eq('household_id', householdId);
+}
+
+async function markNotificationsReadInCloud(ids) {
+  if (!USE_SUPABASE || !supabase || !householdId || !ids.length) return;
+  await supabase.from('notifications').update({ is_read: true }).in('id', ids).eq('household_id', householdId);
+}
+
+async function toggleShoppingItem(itemId) {
   const item = state.shoppingList.find(s => s.id === itemId);
   if (!item) return;
   item.isPurchased = !item.isPurchased;
   item.purchasedAt = item.isPurchased ? new Date().toISOString() : null;
   saveState();
+  await persistShoppingItemToCloud(item);
   render();
 }
 
-function clearPurchasedItems() {
+async function clearPurchasedItems() {
+  const purchasedIds = state.shoppingList.filter(s => s.isPurchased).map(s => s.id);
   state.shoppingList = state.shoppingList.filter(s => !s.isPurchased);
   saveState();
+  await deletePurchasedShoppingItemsFromCloud(purchasedIds);
   render();
 }
 
-function markAllNotificationsRead() {
+async function markAllNotificationsRead() {
+  const unreadIds = state.notifications.filter(n => !n.isRead).map(n => n.id);
   state.notifications.forEach(n => n.isRead = true);
   saveState();
+  await markNotificationsReadInCloud(unreadIds);
   render();
 }
 
@@ -987,7 +1241,7 @@ function renderOnboarding() {
         <button type="submit" class="btn-primary">はじめる</button>
       </form>
       <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--text-4);">
-        Stage 1 (個人ローカル版) · データはこのブラウザに保存されます
+        Stage 2準備: `window.STOCK_CONFIG.supabaseAnonKey` を設定すると認証が有効化されます
       </div>
     </div>
   `;
@@ -1004,7 +1258,7 @@ function attachOnboardingHandlers() {
       });
     }
   });
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
     state.user = {
@@ -1360,7 +1614,22 @@ function renderLogItem(l, product) {
   `;
 }
 
-function confirmDeleteProduct(productId) {
+
+async function deleteProductFromCloud(productId) {
+  if (!USE_SUPABASE || !supabase || !householdId) return;
+  await supabase.from('shopping_list_items').delete().eq('household_id', householdId).eq('product_id', productId);
+  await supabase.from('notifications').delete().eq('household_id', householdId).eq('product_id', productId);
+  await supabase.from('stock_logs').delete().eq('household_id', householdId).eq('product_id', productId);
+  await supabase.from('inventory').delete().eq('household_id', householdId).eq('product_id', productId);
+  await supabase.from('products').delete().eq('household_id', householdId).eq('id', productId);
+}
+
+async function deleteCategoryFromCloud(categoryId) {
+  if (!USE_SUPABASE || !supabase || !householdId) return;
+  await supabase.from('categories').delete().eq('household_id', householdId).eq('id', categoryId);
+}
+
+async function confirmDeleteProduct(productId) {
   const product = state.products.find(p => p.id === productId);
   if (!product) return;
   if (confirm('「' + product.name + '」を削除しますか?\n在庫データ・履歴もすべて削除されます。')) {
@@ -1370,6 +1639,7 @@ function confirmDeleteProduct(productId) {
     state.shoppingList = state.shoppingList.filter(s => s.productId !== productId);
     state.notifications = state.notifications.filter(n => n.productId !== productId);
     saveState();
+    await deleteProductFromCloud(productId);
     showToast('削除しました');
     navigate('home');
   }
@@ -1423,6 +1693,49 @@ function renderAdd() {
 // =============================================================
 // === Add/Edit Product Modal ===
 // =============================================================
+
+
+async function upsertProductToCloud(product, inventoryRow, isNew) {
+  if (!USE_SUPABASE || !supabase || !householdId) return;
+  await supabase.from('products').upsert({
+    id: product.id,
+    household_id: householdId,
+    category_id: product.categoryId,
+    name: product.name,
+    jan_code: product.janCode,
+    has_nested: product.hasNested,
+    unit: product.unit,
+    sub_unit: product.subUnit,
+    sub_units_per_unit: product.subUnitsPerUnit,
+    max_total: product.maxTotal,
+    alert_threshold: product.alertThreshold,
+    notes: product.notes,
+    pinned: product.pinned,
+    created_at: product.createdAt,
+  });
+  await supabase.from('inventory').upsert({
+    household_id: householdId,
+    product_id: product.id,
+    sealed_count: inventoryRow.sealedCount,
+    opened_sub_count: inventoryRow.openedSubCount,
+    nearest_expiry: inventoryRow.nearestExpiry,
+    updated_at: inventoryRow.lastUpdatedAt,
+  }, { onConflict: 'product_id' });
+  if (isNew) {
+    await supabase.from('stock_logs').insert({
+      household_id: householdId,
+      product_id: product.id,
+      operation: 'adjust',
+      delta_unit: inventoryRow.sealedCount,
+      delta_sub: inventoryRow.openedSubCount,
+      sealed_after: inventoryRow.sealedCount,
+      opened_sub_after: inventoryRow.openedSubCount,
+      source: 'manual',
+      note: '初期登録',
+      created_at: new Date().toISOString(),
+    });
+  }
+}
 
 function openAddProductModal(productId) {
   productId = productId || null;
@@ -1557,7 +1870,7 @@ function openAddProductModal(productId) {
     });
   });
 
-  document.getElementById('product-form').addEventListener('submit', (e) => {
+  document.getElementById('product-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
     const isNested = fd.get('hasNested') === 'true';
@@ -1607,6 +1920,7 @@ function openAddProductModal(productId) {
       logStock(pid, 'adjust', sealedCount, openedSubCount, 'manual', '初期登録');
     }
     saveState();
+    await upsertProductToCloud(product, state.inventory[pid], !isEdit);
     closeModal();
     showToast(isEdit ? '更新しました' : '追加しました');
     if (isEdit) render();
@@ -1741,6 +2055,37 @@ function renderNotifItem(n) {
 // === Render: Settings ===
 // =============================================================
 
+
+async function fetchInviteCode() {
+  if (!supabase || !householdId) return null;
+  const { data, error } = await supabase.from('households').select('invite_code').eq('id', householdId).single();
+  if (error) return null;
+  return data && data.invite_code ? data.invite_code : null;
+}
+
+async function regenerateInviteCode() {
+  if (!supabase || !householdId) { showToast('Supabase未設定です'); return; }
+  const { data, error } = await supabase.rpc('regenerate_invite_code', { household_id: householdId });
+  if (error) { showToast(error.message || '再生成に失敗しました'); return; }
+  const nextCode = typeof data === 'string' ? data : (data && data.invite_code) || '';
+  if (nextCode) {
+    const el = document.getElementById('invite-code-value');
+    if (el) el.textContent = nextCode;
+  }
+  showToast('招待コードを再生成しました');
+}
+
+async function logoutSupabase() {
+  if (!supabase) { showToast('Supabase未設定です'); return; }
+  const { error } = await supabase.auth.signOut();
+  if (error) { showToast(error.message || 'ログアウト失敗'); return; }
+  authUser = null;
+  householdId = null;
+  state = createInitialState();
+  saveState();
+  navigate('auth');
+}
+
 function renderSettings() {
   const userName = state.user && state.user.name ? state.user.name : '';
   const userInitial = userName ? userName[0] : '?';
@@ -1756,7 +2101,7 @@ function renderSettings() {
         <span class="avatar avatar-lg" style="background:${userColor};">${escapeHtml(userInitial)}</span>
         <div style="flex:1;">
           <div style="font-size:14px;font-weight:700;">${escapeHtml(userName)}</div>
-          <div style="font-size:11px;color:var(--text-3);">Stage 1 (ローカル版・1人で使用中)</div>
+          <div style="font-size:11px;color:var(--text-3);">${USE_SUPABASE ? 'Stage 2 (家族共有モード)' : 'Stage 1 (ローカル版・1人で使用中)'}</div>
         </div>
         <button class="btn-text" onclick="openEditProfileModal()">編集</button>
       </div>
@@ -1811,6 +2156,30 @@ function renderSettings() {
           </button>
         </div>
       </div>
+
+
+      ${USE_SUPABASE ? `
+      <div class="settings-section">
+        <div class="section-title">家族共有</div>
+        <div class="settings-list">
+          <div class="settings-row">
+            <div class="icon-wrap">👨‍👩‍👧‍👦</div>
+            <div class="label">招待コード</div>
+            <div class="meta" id="invite-code-value">読み込み中...</div>
+          </div>
+          <button class="settings-row" onclick="regenerateInviteCode()">
+            <div class="icon-wrap">🔄</div>
+            <div class="label">招待コードを再生成</div>
+            <span class="muted">›</span>
+          </button>
+          <button class="settings-row" onclick="logoutSupabase()">
+            <div class="icon-wrap">🚪</div>
+            <div class="label">ログアウト</div>
+            <span class="muted">›</span>
+          </button>
+        </div>
+      </div>
+      ` : ''}
 
       <div class="settings-section">
         <div class="section-title">アプリ情報</div>
@@ -1872,7 +2241,7 @@ function openEditProfileModal() {
       });
     }
   });
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
     state.user.name = fd.get('name').trim();
@@ -1961,6 +2330,18 @@ function renderCategories() {
   `;
 }
 
+
+async function upsertCategoryToCloud(category) {
+  if (!USE_SUPABASE || !supabase || !householdId) return;
+  await supabase.from('categories').upsert({
+    id: category.id,
+    household_id: householdId,
+    name: category.name,
+    icon: category.icon,
+    sort_order: category.sortOrder,
+  });
+}
+
 function openAddCategoryModal() {
   renderCategoryModal(null);
 }
@@ -2010,26 +2391,31 @@ function renderCategoryModal(editing) {
     const name = fd.get('name').trim();
     const icon = fd.get('icon') || 'other';
     if (!name) { showToast('名前を入力してください'); return; }
+    let categoryPayload;
     if (editing) {
       const idx = state.categories.findIndex(c => c.id === id);
       state.categories[idx] = Object.assign({}, editing, { name, icon });
+      categoryPayload = state.categories[idx];
     } else {
-      state.categories.push({ id, name, icon, sortOrder: state.categories.length + 1 });
+      categoryPayload = { id, name, icon, sortOrder: state.categories.length + 1 };
+      state.categories.push(categoryPayload);
     }
     saveState();
+    await upsertCategoryToCloud(categoryPayload);
     closeModal();
     showToast(editing ? '更新しました' : '追加しました');
     render();
   });
 }
 
-function confirmDeleteCategory(id) {
+async function confirmDeleteCategory(id) {
   const cat = state.categories.find(c => c.id === id);
   const count = state.products.filter(p => p.categoryId === id).length;
   if (count > 0) { showToast(count + '件の商品が紐付いているため削除できません'); return; }
   if (!confirm('カテゴリ「' + cat.name + '」を削除しますか?')) return;
   state.categories = state.categories.filter(c => c.id !== id);
   saveState();
+  await deleteCategoryFromCloud(id);
   closeModal();
   showToast('削除しました');
   render();
@@ -2283,7 +2669,11 @@ function render() {
   const app = document.getElementById('app');
   let html = '';
   switch (state.ui.currentScreen) {
-    case 'onboarding': html = renderOnboarding(); break;
+    case 'onboarding': html = USE_SUPABASE ? renderAuth() : renderOnboarding(); break;
+    case 'auth': html = renderAuth(); break;
+    case 'signup': html = renderSignup(); break;
+    case 'auth-check-email': html = renderCheckEmail(); break;
+    case 'household-setup': html = renderHouseholdSetup(); break;
     case 'home': html = renderHome(); break;
     case 'detail': html = renderDetail(); break;
     case 'add': html = renderAdd(); break;
@@ -2295,8 +2685,35 @@ function render() {
     default: html = renderHome();
   }
   app.innerHTML = html;
-  if (state.ui.currentScreen === 'onboarding') {
-    attachOnboardingHandlers();
+  if (state.ui.currentScreen === 'onboarding' && !USE_SUPABASE) attachOnboardingHandlers();
+  if (state.ui.currentScreen === 'auth' || (state.ui.currentScreen === 'onboarding' && USE_SUPABASE)) attachAuthHandlers('auth');
+  if (state.ui.currentScreen === 'signup') attachAuthHandlers('signup');
+  if (state.ui.currentScreen === 'settings' && USE_SUPABASE) {
+    fetchInviteCode().then((code) => {
+      const el = document.getElementById('invite-code-value');
+      if (el) el.textContent = code || '未取得';
+    });
+  }
+  if (state.ui.currentScreen === 'household-setup') {
+    const c = document.getElementById('household-create-form');
+    const j = document.getElementById('household-join-form');
+    if (c) c.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      if (!supabase) { showToast('Supabaseキー未設定です'); return; }
+      const name=(new FormData(c)).get('name');
+      const {data,error}=await supabase.rpc('create_household',{name});
+      if(error){showToast(error.message);return;}
+      householdId=data;
+      await bootstrapAfterLogin();
+    });
+    if (j) j.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      if (!supabase) { showToast('Supabaseキー未設定です'); return; }
+      const code=(new FormData(j)).get('code');
+      const {error}=await supabase.rpc('join_household_by_invite',{invite_code:code});
+      if(error){showToast(error.message);return;}
+      await bootstrapAfterLogin();
+    });
   }
 }
 
@@ -2333,8 +2750,11 @@ function loadSampleData() {
 }
 
 // === Initialize ===
+initSupabase();
 state = loadState() || createInitialState();
+if (USE_SUPABASE) { state.ui.currentScreen = 'onboarding'; }
 render();
+if (USE_SUPABASE && supabase) { supabase.auth.getUser().then(({data})=>{ authUser=data.user; if (authUser) bootstrapAfterLogin(); }); }
 
 // Add sample data prompt for empty new state
 if (state.user && state.products.length === 0) {
@@ -2353,6 +2773,12 @@ if (state.user && state.products.length === 0) {
       }
     }
   }, 100);
+}
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
 }
 </script>
 </body>
